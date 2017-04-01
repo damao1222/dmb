@@ -15,18 +15,24 @@
     limitations under the License.
 */
 
+#ifndef DMBSYSUTIL_H
+#define DMBSYSUTIL_H
+
 #include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include <unistd.h>
 
-int main(int argc, char** argv)
-{
-    dmbSystemInit();
+extern dmbBOOL DMB_BIGENDIAN;
 
-    sync();
+dmbBOOL dmbSystemInit();
 
-    return DMB_OK;
-}
+void dmbRev16(void *p);
+void dmbRev32(void *p);
+void dmbRev64(void *p);
+dmbINT16 dmbRevInt16(dmbINT16 i);
+dmbINT32 dmbRevint32(dmbINT32 i);
+dmbINT64 dmbRevint64(dmbINT64 i);
 
-inline void dmb_noop()
-{}
+void dmbInt16ToByte(dmbBYTE *p, dmbINT16 i);
+void dmbInt32ToByte(dmbBYTE *p, dmbINT32 i);
+void dmbInt64ToByte(dmbBYTE *p, dmbINT64 i);
+
+#endif // DMBSYSUTIL_H

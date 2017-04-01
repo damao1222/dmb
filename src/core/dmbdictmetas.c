@@ -15,18 +15,20 @@
     limitations under the License.
 */
 
-#include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include <unistd.h>
+#include "cbdictmetas.h"
 
-int main(int argc, char** argv)
-{
-    dmbSystemInit();
+struct CBDictMeta CBDictMetaStrObj= {
+    CBStringObjHashFunc,
+    CBStringObjKeyCompare,
+    CBStringObjDumpKey,
+    CBStringDumpHashFunc,
+    CBStringDumpKeyCompare
+};
 
-    sync();
-
-    return DMB_OK;
-}
-
-inline void dmb_noop()
-{}
+struct CBDictMeta CBDictMetaStr = {
+    CBStringHashFunc,
+    CBStringKeyCompare,
+    CBStringDumpKey,
+    CBStringDumpHashFunc,
+    CBStringDumpKeyCompare
+};

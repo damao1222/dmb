@@ -15,18 +15,31 @@
     limitations under the License.
 */
 
-#include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include <unistd.h>
+#include "dmbfilesystem.h"
+#include <dirent.h>
+#include <sys/stat.h>
 
-int main(int argc, char** argv)
+dmbBOOL dmbIsDirExists(const dmbCHAR *pcDir)
 {
-    dmbSystemInit();
+    if (pcDir == NULL)
+        return FALSE;
 
-    sync();
-
-    return DMB_OK;
+    DIR *tmpDir = opendir(pcDir);
+    if (tmpDir)
+    {
+        closedir(tmpDir);
+        return TRUE;
+    }
+    return FALSE;
 }
 
-inline void dmb_noop()
-{}
+dmbBOOL dmbIsFileExists(const dmbCHAR *pcFile)
+{
+    struct stat buffer;
+    return (stat(pcFile, &buffer)==0);
+}
+
+dmbBOOL dmbMkdir(const dmbCHAR *pcDir)
+{
+    return mkdir(pcDir, 0777) == 0;
+}

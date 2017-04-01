@@ -15,18 +15,35 @@
     limitations under the License.
 */
 
+#ifndef DMBFILESYSTEM_H
+#define DMBFILESYSTEM_H
+
 #include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include <unistd.h>
 
-int main(int argc, char** argv)
-{
-    dmbSystemInit();
+typedef enum {
+    dmbTypeUnknown = 0,
+    dmbTypeFile  = 1,//file
+    dmbTypeDir = 2//dir
+} dmbFileType;
 
-    sync();
+/**
+ * @brief 判断目录是否存在
+ * @param 目录路径
+ * @return 存在返回TRUE，不存在返回FALSE
+ */
+dmbBOOL dmbIsDirExists(const dmbCHAR *pcDir);
 
-    return DMB_OK;
-}
+/**
+ * @brief dmbIsFileExists 判断文件是否存在
+ * @param pcFile 文件路径
+ * @return 存在返回TRUE，不存在返回FALSE
+ */
+dmbBOOL dmbIsFileExists(const dmbCHAR *pcFile);
 
-inline void dmb_noop()
-{}
+/**
+ * @brief 创建一个目录（不逐级创建）
+ * @return 成功返回TRUE，否则返回FALSE
+ */
+dmbBOOL dmbMkdir(const dmbCHAR *pcDir);
+
+#endif // DMBFILESYSTEM_H
