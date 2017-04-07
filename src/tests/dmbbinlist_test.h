@@ -15,25 +15,9 @@
     limitations under the License.
 */
 
-#include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include <unistd.h>
-#include "utils/dmblog.h"
+#ifndef DMBBINLIST_TEST_H
+#define DMBBINLIST_TEST_H
 
-#include "tests/dmbbinlist_test.h"
+void dmbbinlist_test();
 
-int main(int argc, char** argv)
-{
-    dmbSystemInit();
-
-    dmbbinlist_test();
-
-    sync();
-
-    dmbLogSystemInfo();
-
-    return DMB_OK;
-}
-
-inline void dmb_noop()
-{}
+#endif // DMBBINLIST_TEST_H

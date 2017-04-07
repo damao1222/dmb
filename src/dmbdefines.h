@@ -62,6 +62,8 @@ typedef dmbUINT8 dmbBYTE;
 #define NULL 0
 #endif
 
+#define DMB_UNUSED(x) ((void)x)
+
 void dmb_noop();
 
 #ifdef __compiler_offsetof
@@ -94,8 +96,29 @@ typedef dmbINT16 dmbCode;
 
 //########2001-3000数据结构错误码########
 //########3101-3200 binlist相关错误码#####
+//使用内部分配接口分配时发生错误
+#define DMB_ERRCODE_BINLIST_ALLOC_FAILED 3101
+
 //存储到binlist中的字符串大小超出支持的最大值
-#define DMB_ERRCODE_BINLIST_STR_OOR 3101
+#define DMB_ERRCODE_BINLIST_STR_OOR 3111
+
+//存储到binlist中的元素个数超过限制大小
+#define DMB_ERRCODE_BINLIST_ENTRY_OOR 3112
+
+//存储到binlist已达最大容量上限
+#define DMB_ERRCODE_BINLIST_FULL 3113
+
+//binlist的元素是字串
+#define DMB_ERRCODE_BINENTRY_IS_STR 3151
+
+//binlist的元素是int16
+#define DMB_ERRCODE_BINENTRY_IS_INT16 3152
+
+//binlist的元素是int32
+#define DMB_ERRCODE_BINENTRY_IS_INT32 3153
+
+//binlist的元素是int64
+#define DMB_ERRCODE_BINENTRY_IS_INT64 3154
 
 //########3201-3300 string相关错误码######
 
