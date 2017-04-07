@@ -28,7 +28,7 @@
 #define DMB_LOG_FILENAME "dmb.log"
 static const char LEVEL_NAMES[][8] =
 {"DEBUG", "INFO", "RUNTIME", "WARNING", "ERROR", "FATAL", "NONE"};
-static const char* PREFIX_FORMAT = "[Cloudb %s %s]: ";
+static const char* PREFIX_FORMAT = "[dmb %s %s]: ";
 
 static int g_log_level = LOGDEBUG;
 static pthread_mutex_t g_log_mutex;
@@ -102,7 +102,7 @@ void dmbLog(int level, const char *format, ...)
 
     dmbMemSet(MSGBUF, 0 ,MSG_BUFFER_SIZE);
     dmbGetFormatTime(TIMEBUF, 20);
-    snprintf(MSGBUF, 39, PREFIX_FORMAT, TIMEBUF, LEVEL_NAMES[level]);
+    snprintf(MSGBUF, 36, PREFIX_FORMAT, TIMEBUF, LEVEL_NAMES[level]);
     va_list ArgPtr;
     va_start(ArgPtr, format);
     int len = strlen(MSGBUF);

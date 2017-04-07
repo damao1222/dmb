@@ -329,7 +329,7 @@ const dmbBinAllocator DMB_DEFAULT_BINALLOCATOR = {
 dmbCode fixmem_malloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT *pLen)
 {
     dmbFixmemAllocator* fixmem = (dmbFixmemAllocator*)pAllocator->getData(pAllocator);
-    dmbUINT left = fixmem->data.len - fixmem->data.offset - 1;
+    dmbUINT left = fixmem->data.len - fixmem->data.offset;
     dmbCode code = DMB_ERRCODE_OK;
     if (*pLen > left)
     {
@@ -340,14 +340,14 @@ dmbCode fixmem_malloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT *pLen)
     *ptr = fixmem->data.ptr + fixmem->data.offset;
     fixmem->data.offset += *pLen;
 
-    return DMB_ERRCODE_OK;
+    return code;
 }
 
 dmbCode fixmem_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize, dmbUINT *pLen)
 {
     DMB_UNUSED(ptr);
     dmbFixmemAllocator* fixmem = (dmbFixmemAllocator*)pAllocator->getData(pAllocator);
-    dmbUINT left = fixmem->data.len - fixmem->data.offset -1;
+    dmbUINT left = fixmem->data.len - fixmem->data.offset;
     dmbUINT need = *pLen - oldSize;
     dmbCode code = DMB_ERRCODE_OK;
     if (need > left)
@@ -357,7 +357,7 @@ dmbCode fixmem_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize,
     }
     fixmem->data.offset += need;
 
-    return DMB_ERRCODE_OK;
+    return code;
 }
 
 dmbCode fixmem_free(dmbBinAllocator *pAllocator, void *ptr)

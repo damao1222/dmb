@@ -19,7 +19,7 @@
 #include "core/dmbbinlist.h"
 #include "utils/dmblog.h"
 
-#define TEST_DEFAULT_ALLCATOR
+//#define TEST_DEFAULT_ALLCATOR
 
 void dmbbinlist_test()
 {
@@ -27,8 +27,9 @@ void dmbbinlist_test()
     dmbBinAllocator *allocator = &DMB_DEFAULT_BINALLOCATOR;
 #else
     dmbBYTE fixMem[20480] = {0};
+//    dmbBYTE fixMem[16384] = {0};
     dmbFixmemAllocator fixallocator;
-    dmbBinAllocator *allocator = dmbInitFixmemAllocator(fixallocator, fixMem, 20480);
+    dmbBinAllocator *allocator = dmbInitFixmemAllocator(&fixallocator, fixMem, sizeof(fixMem));
 #endif
     dmbBinlist *pList = dmbBinlistCreate(allocator);
     dmbBYTE test_buf[16384] = {0};
