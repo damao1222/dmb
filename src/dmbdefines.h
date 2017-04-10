@@ -96,17 +96,20 @@ typedef dmbINT16 dmbCode;
 
 //########2001-3000数据结构错误码########
 //########3101-3200 binlist相关错误码#####
-//使用内部分配接口分配时发生错误
+//binlist使用内部分配接口分配时发生错误
 #define DMB_ERRCODE_BINLIST_ALLOC_FAILED DMB_ERRCODE_ALLOC_FAILED
 
-//使用内部分配接口，之分配了一部分内存，没有分配期待的内存大小
+//binlist使用内部分配接口，之分配了一部分内存，没有分配期待的内存大小
 #define DMB_ERRCODE_BINLIST_ALLOC_PART 3101
 
-//没有足够的控制写入数据
+//binlist没有足够的空间写入数据
 #define DMB_ERRCODE_BINLIST_NO_ENOUGH_SPACE 3102
 
-//尝试合并不能合并的类型
+//binlist尝试合并不能合并的类型
 #define DMB_ERRCODE_BINLIST_MERGE_ERROR_TYPE 3103
+
+//binlist合并的entry头异常
+#define DMB_ERRCODE_BINLIST_MERGE_ENTRYHEAD_ERROR 3104
 
 //存储到binlist中的字符串大小超出支持的最大值
 #define DMB_ERRCODE_BINLIST_STR_OOR 3111

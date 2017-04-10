@@ -67,6 +67,7 @@ const dmbUINT DMB_BINLIST_HEAD_SIZE = sizeof(dmbUINT)*2 + sizeof(dmbUINT16);
 const dmbUINT DMB_BINLIST_TAIL_SIZE = sizeof(dmbBYTE);
 
 static inline void dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *pAllLen);
+static inline void setStrLen(dmbBinEntry *pEntry, dmbUINT uLen);
 
 dmbBinlist* dmbBinlistCreate(dmbBinAllocator *pAllocator)
 {
@@ -123,12 +124,12 @@ dmbCode dmbBinlistPushBack(dmbBinAllocator *pAllocator, dmbBinlist *pList, dmbBi
     dmbBinEntryLen(entry, &uLen, &uAllLen);
     if (DMB_BINENTRY_IS_STR(pItem->entryhead))
     {
-        dmbMemCopy(entry + uAllLen, pItem->entryhead, uAllLenNew - uLenNew);
-        dmbMemCopy(entry + uAllLen + (uAllLenNew - uLenNew), pItem->data, uLenNew);
+        pAllocator->memcpy(pAllocator, entry + uAllLen, pItem->entryhead, uAllLenNew - uLenNew);
+        pAllocator->memcpy(pAllocator, entry + uAllLen + (uAllLenNew - uLenNew), pItem->data, uLenNew);
     }
     else
     {
-        dmbMemCopy(entry + uAllLen, pItem->entryhead, uAllLenNew);
+        pAllocator->memcpy(pAllocator, entry + uAllLen, pItem->entryhead, uAllLenNew);
     }
     BINLIST_UPDATE_SIZE(pList, uAllocLen);
     BINLIST_UPDATE_LAST(pList, BINLIST_LAST(pList) + uAllLen);
@@ -242,10 +243,10 @@ dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var)
 
     return DMB_ERRCODE_OK;
 }
-#if 0
-dmbCode dmbBinEntryMerge(dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart)
+
+dmbCode dmbBinEntryMerge(dmbBinAllocator *pAllocator, dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart)
 {
-    dmbUINT uCurrent, uSrcLen, uSrcAllLen, uAllocLen, uDestLen, uDestAllLen, uNewLen, uNewAllLen;
+    dmbUINT uCurrent, uSrcLen, uSrcAllLen, uAllocLen, uDestLen, uDestAllLen;
 
     if (!DMB_BINENTRY_IS_STR(pSrc))
         return DMB_ERRCODE_BINLIST_MERGE_ERROR_TYPE;
@@ -253,38 +254,64 @@ dmbCode dmbBinEntryMerge(dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSr
     uCurrent = BINLIST_SIZE(pList);
     dmbBinEntryLen(pSrc, &uSrcLen, &uSrcAllLen);
     dmbBinEntryLen(pDest, &uDestLen, &uDestAllLen);
-    dmbBinItem item;
-    DMB_BINITEM_STR(&item, NULL, uSrcLen+uDestLen);
 
-    dmbBinEntryLen(item.entryhead, &uNewLen, &uNewAllLen);
-
-    if (uCurrent - uDestAllLen + uNewAllLen > UINT_MAX)
+    if (uCurrent + uSrcLen > UINT_MAX)
         return DMB_ERRCODE_BINLIST_FULL;
 
-    uAllocLen = uCurrent - uDestAllLen + uNewAllLen;
+    uAllocLen = uCurrent + uSrcLen;
     dmbCode code = pAllocator->realloc(pAllocator, (void**)&pList, uCurrent, &uAllocLen);
     if (code == DMB_ERRCODE_BINLIST_ALLOC_FAILED)
         return code;
     else if (code == DMB_ERRCODE_BINLIST_ALLOC_PART && !bPart)
         return code;
 
-    if ((uAllocLen - uCurrent) < (uNewAllLen - uNewLen))
+    if (uAllocLen == uCurrent)
         return DMB_ERRCODE_BINLIST_NO_ENOUGH_SPACE;
 
-    dmbMemCopy(pDest, item.entryhead, uNewAllLen - uNewLen);
-    dmbMemCopy(pDest + (uNewAllLen - uNewLen), uDestLen);
-    dmbMemCopy(pDest + (uNewAllLen - uNewLen) + uDestLen, uNewLen);
+    setStrLen(pDest, uAllocLen);
+    pAllocator->memcpy(pAllocator, pDest + uDestAllLen, pSrc + (uSrcAllLen - uSrcLen), uAllocLen - uCurrent);
 
     BINLIST_UPDATE_SIZE(pList, uAllocLen);
-    BINLIST_UPDATE_LAST(pList, BINLIST_LAST(pList) + uDestAllLen);
+    if (dmbBinlistLast(pList) != pDest)
+        BINLIST_UPDATE_LAST(pList, BINLIST_LAST(pList) + (uAllocLen - uCurrent));
 //    BINLIST_UPDATE_LEN(pList, BINLIST_LEN(pList) + 1);
     BINLIST_UPDATE_ENDCODE(pList);
 
     return code;
 }
-#endif
+
+static inline void setStrLen(dmbBinEntry *pEntry, dmbUINT uLen)
+{
+    dmbBYTE encode = DMB_BINCODE(pEntry);
+    switch (encode) {
+    case DMB_BINCODE_TINYSTR:
+    {
+        pEntry[0] = DMB_BINCODE_TINYSTR | uLen;
+        break;
+    }
+    case DMB_BINCODE_STR:
+    {
+        pEntry[0] = DMB_BINCODE_STR | ((uLen >> 8) & 0x3F);
+        pEntry[1] = uLen & 0xFF;
+        break;
+    }
+    case DMB_BINCODE_LARGESTR:
+    {
+        pEntry[0] = DMB_BINCODE_LARGESTR;
+        pEntry[1] = (uLen >> 24) & 0xFF;
+        pEntry[2] = (uLen >> 16) & 0xFF;
+        pEntry[3] = (uLen >> 8) & 0xFF;
+        pEntry[4] = uLen & 0xFF;
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 inline dmbCode dmbBinItemStr(dmbBinItem *pItem, dmbBYTE *pData, dmbUINT uLen)
 {
+    pItem->offset = 0;
     if (uLen < 63)
     {
         pItem->entryhead[0] = DMB_BINCODE_TINYSTR | uLen;
@@ -346,6 +373,14 @@ dmbCode default_free(dmbBinAllocator *pAllocator, void *ptr)
     return DMB_ERRCODE_OK;
 }
 
+dmbCode default_memcpy(struct dmbBinAllocator *pAllocator, void *pDest, void *pSrc, dmbUINT uSize)
+{
+    DMB_UNUSED(pAllocator);
+    dmbMemCopy(pDest, pSrc, uSize);
+
+    return DMB_ERRCODE_OK;
+}
+
 dmbCode default_reset(dmbBinAllocator *pAllocator)
 {
     DMB_UNUSED(pAllocator);
@@ -362,6 +397,36 @@ const dmbBinAllocator DMB_DEFAULT_BINALLOCATOR = {
     default_malloc,
     default_realloc,
     default_free,
+    default_memcpy,
+    default_reset,
+    default_getMember
+};
+
+dmbCode void_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize, dmbUINT *pLen)
+{
+    DMB_UNUSED(pAllocator);
+    DMB_UNUSED(ptr);
+    DMB_UNUSED(oldSize);
+    DMB_UNUSED(pLen);
+
+    return DMB_ERRCODE_OK;
+}
+
+dmbCode void_memcpy(struct dmbBinAllocator *pAllocator, void *pDest, void *pSrc, dmbUINT uSize)
+{
+    DMB_UNUSED(pAllocator);
+    DMB_UNUSED(pDest);
+    DMB_UNUSED(pSrc);
+    DMB_UNUSED(uSize);
+
+    return DMB_ERRCODE_OK;
+}
+
+const dmbBinAllocator DMB_VOID_BINALLOCATOR = {
+    default_malloc,
+    void_realloc,
+    default_free,
+    void_memcpy,
     default_reset,
     default_getMember
 };
@@ -395,6 +460,7 @@ dmbCode fixmem_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize,
         need = left;
         code = DMB_ERRCODE_BINLIST_ALLOC_PART;
     }
+    *pLen = oldSize + need;
     fixmem->data.offset += need;
 
     return code;
@@ -426,6 +492,7 @@ dmbBinAllocator* dmbInitFixmemAllocator(dmbFixmemAllocator *pAllocator, dmbBYTE 
     pAllocator->allocator.malloc = fixmem_malloc;
     pAllocator->allocator.realloc = fixmem_realloc;
     pAllocator->allocator.free = fixmem_free;
+    pAllocator->allocator.memcpy = default_memcpy;
     pAllocator->allocator.reset = fixmem_reset;
     pAllocator->allocator.getData = fixmem_getData;
 

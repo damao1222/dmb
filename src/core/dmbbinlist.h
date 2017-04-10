@@ -37,6 +37,7 @@ typedef dmbBYTE dmbBinEntry, dmbBinlist;
 typedef struct dmbBinItem {
     dmbBYTE entryhead[9];
     dmbBYTE *data;
+    dmbUINT offset;
 } dmbBinItem;
 
 typedef struct dmbBinVar {
@@ -53,6 +54,7 @@ typedef struct dmbBinAllocator {
     dmbCode (*malloc)(struct dmbBinAllocator *pAllocator, void **ptr, dmbUINT *pLen);
     dmbCode (*realloc)(struct dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize, dmbUINT *pLen);
     dmbCode (*free)(struct dmbBinAllocator *pAllocator, void *ptr);
+    dmbCode (*memcpy)(struct dmbBinAllocator *pAllocator, void *pDest, void *pSrc, dmbUINT uSize);
     dmbCode (*reset)(struct dmbBinAllocator *pAllocator);
     void* (*getData)(struct dmbBinAllocator *pAllocator);
 } dmbBinAllocator;
@@ -67,29 +69,34 @@ dmbBinEntry* dmbBinlistNext(dmbBinEntry *pEntry);
 void dmbBinlistDestroy(dmbBinAllocator *pAllocator, dmbBinlist *pList);
 dmbUINT dmbBinContentLen(dmbBinEntry *pEntry);
 dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var);
-#if 0
-dmbCode dmbBinEntryMerge(dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart);
-#endif
+dmbCode dmbBinEntryMerge(dmbBinAllocator *pAllocator, dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart);
 dmbCode dmbBinItemStr(dmbBinItem *pItem, dmbBYTE *pData, dmbUINT uLen);
 
 #define DMB_BINITEM_I16(ITEM_PTR, v) do { \
+                    (ITEM_PTR)->offset = 0; \
                     (ITEM_PTR)->entryhead[0] = DMB_BINCODE_I16; \
                     dmbInt16ToByte((ITEM_PTR)->entryhead+1, (v)); \
                 } while(0)
 
 #define DMB_BINITEM_I32(ITEM_PTR, v) do { \
+                    (ITEM_PTR)->offset = 0; \
                     (ITEM_PTR)->entryhead[0] = DMB_BINCODE_I32; \
                     dmbInt32ToByte((ITEM_PTR)->entryhead+1, (v)); \
                 } while(0)
 
 #define DMB_BINITEM_I64(ITEM_PTR, v) do { \
+                    (ITEM_PTR)->offset = 0; \
                     (ITEM_PTR)->entryhead[0] = DMB_BINCODE_I64; \
                     dmbInt64ToByte((ITEM_PTR)->entryhead+1, (v)); \
                 } while(0)
 
 #define DMB_BINITEM_STR(ITEM_PTR, v, LEN) dmbBinItemStr(ITEM_PTR, v, (LEN))
 
+//malloc binlist
 extern const dmbBinAllocator DMB_DEFAULT_BINALLOCATOR;
+//void binlist
+extern const dmbBinAllocator DMB_VOID_BINALLOCATOR;
+
 typedef struct dmbFixmemAllocator{
     dmbBinAllocator allocator;
     struct {
