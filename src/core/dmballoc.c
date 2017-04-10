@@ -18,6 +18,7 @@
 #include "dmballoc.h"
 #include "utils/dmblog.h"
 #include "thread/dmbatomic.h"
+#include <string.h>
 
 #define __xstr(s) __str(s)
 #define __str(s) #s

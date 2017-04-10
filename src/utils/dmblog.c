@@ -17,10 +17,11 @@
 
 #include "dmblog.h"
 #include "core/dmballoc.h"
-//#include "cbfilesystem.h"
+#include "dmbfilesystem.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <pthread.h>
 #include "dmbtime.h"
 

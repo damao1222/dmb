@@ -242,7 +242,47 @@ dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var)
 
     return DMB_ERRCODE_OK;
 }
+#if 0
+dmbCode dmbBinEntryMerge(dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart)
+{
+    dmbUINT uCurrent, uSrcLen, uSrcAllLen, uAllocLen, uDestLen, uDestAllLen, uNewLen, uNewAllLen;
 
+    if (!DMB_BINENTRY_IS_STR(pSrc))
+        return DMB_ERRCODE_BINLIST_MERGE_ERROR_TYPE;
+
+    uCurrent = BINLIST_SIZE(pList);
+    dmbBinEntryLen(pSrc, &uSrcLen, &uSrcAllLen);
+    dmbBinEntryLen(pDest, &uDestLen, &uDestAllLen);
+    dmbBinItem item;
+    DMB_BINITEM_STR(&item, NULL, uSrcLen+uDestLen);
+
+    dmbBinEntryLen(item.entryhead, &uNewLen, &uNewAllLen);
+
+    if (uCurrent - uDestAllLen + uNewAllLen > UINT_MAX)
+        return DMB_ERRCODE_BINLIST_FULL;
+
+    uAllocLen = uCurrent - uDestAllLen + uNewAllLen;
+    dmbCode code = pAllocator->realloc(pAllocator, (void**)&pList, uCurrent, &uAllocLen);
+    if (code == DMB_ERRCODE_BINLIST_ALLOC_FAILED)
+        return code;
+    else if (code == DMB_ERRCODE_BINLIST_ALLOC_PART && !bPart)
+        return code;
+
+    if ((uAllocLen - uCurrent) < (uNewAllLen - uNewLen))
+        return DMB_ERRCODE_BINLIST_NO_ENOUGH_SPACE;
+
+    dmbMemCopy(pDest, item.entryhead, uNewAllLen - uNewLen);
+    dmbMemCopy(pDest + (uNewAllLen - uNewLen), uDestLen);
+    dmbMemCopy(pDest + (uNewAllLen - uNewLen) + uDestLen, uNewLen);
+
+    BINLIST_UPDATE_SIZE(pList, uAllocLen);
+    BINLIST_UPDATE_LAST(pList, BINLIST_LAST(pList) + uDestAllLen);
+//    BINLIST_UPDATE_LEN(pList, BINLIST_LEN(pList) + 1);
+    BINLIST_UPDATE_ENDCODE(pList);
+
+    return code;
+}
+#endif
 inline dmbCode dmbBinItemStr(dmbBinItem *pItem, dmbBYTE *pData, dmbUINT uLen)
 {
     if (uLen < 63)
@@ -278,7 +318,7 @@ dmbCode default_malloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT *pLen)
     if (*ptr == NULL)
     {
         *pLen = 0;
-        return DMB_ERRCODE_ALLOC_FAILED;
+        return DMB_ERRCODE_BINLIST_ALLOC_FAILED;
     }
 
     return DMB_ERRCODE_OK;
@@ -292,7 +332,7 @@ dmbCode default_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize
     if (*ptr == NULL)
     {
         *pLen = 0;
-        return DMB_ERRCODE_ALLOC_FAILED;
+        return DMB_ERRCODE_BINLIST_ALLOC_FAILED;
     }
 
     return DMB_ERRCODE_OK;
@@ -334,7 +374,7 @@ dmbCode fixmem_malloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT *pLen)
     if (*pLen > left)
     {
         *pLen = left;
-        code = DMB_ERRCODE_BINLIST_ALLOC_FAILED;
+        code = DMB_ERRCODE_BINLIST_ALLOC_PART;
     }
 
     *ptr = fixmem->data.ptr + fixmem->data.offset;
@@ -353,7 +393,7 @@ dmbCode fixmem_realloc(dmbBinAllocator *pAllocator, void **ptr, dmbUINT oldSize,
     if (need > left)
     {
         need = left;
-        code = DMB_ERRCODE_BINLIST_ALLOC_FAILED;
+        code = DMB_ERRCODE_BINLIST_ALLOC_PART;
     }
     fixmem->data.offset += need;
 

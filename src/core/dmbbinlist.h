@@ -67,6 +67,9 @@ dmbBinEntry* dmbBinlistNext(dmbBinEntry *pEntry);
 void dmbBinlistDestroy(dmbBinAllocator *pAllocator, dmbBinlist *pList);
 dmbUINT dmbBinContentLen(dmbBinEntry *pEntry);
 dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var);
+#if 0
+dmbCode dmbBinEntryMerge(dmbBinlist *pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart);
+#endif
 dmbCode dmbBinItemStr(dmbBinItem *pItem, dmbBYTE *pData, dmbUINT uLen);
 
 #define DMB_BINITEM_I16(ITEM_PTR, v) do { \
@@ -84,7 +87,7 @@ dmbCode dmbBinItemStr(dmbBinItem *pItem, dmbBYTE *pData, dmbUINT uLen);
                     dmbInt64ToByte((ITEM_PTR)->entryhead+1, (v)); \
                 } while(0)
 
-#define DMB_BINITEM_STR(ITEM_PTR, v, LEN) dmbBinItemStr(ITEM_PTR, v, LEN)
+#define DMB_BINITEM_STR(ITEM_PTR, v, LEN) dmbBinItemStr(ITEM_PTR, v, (LEN))
 
 extern const dmbBinAllocator DMB_DEFAULT_BINALLOCATOR;
 typedef struct dmbFixmemAllocator{
