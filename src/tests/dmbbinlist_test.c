@@ -18,6 +18,7 @@
 #include "dmbbinlist_test.h"
 #include "core/dmbbinlist.h"
 #include "utils/dmblog.h"
+#include "core/dmballoc.h"
 
 //#define TEST_DEFAULT_ALLCATOR
 
@@ -192,16 +193,73 @@ void dmbbinlist_merge_test()
 
     dmbBinEntry *pEntry = dmbBinlistFirst(pList);
     dmbBinVar var;
+    dmbBYTE debugBuf[65];
     while (pEntry != NULL)
     {
         dmbBinEntryGet(pEntry, &var);
         if (DMB_BINENTRY_IS_STR(pEntry))
-            DMB_LOGD("Srclist str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
+        {
+            dmbMemCopy(debugBuf, var.v.data, var.len);
+            debugBuf[var.len] = 0;
+            DMB_LOGD("first src str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
+        }
         else
-            DMB_LOGD("Srclist int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+            DMB_LOGD("first src int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
         pEntry = dmbBinlistNext(pEntry);
     }
 
+    dmbBinAllocator *mergeAllocator = DMB_DEFAULT_BINALLOCATOR;
+    dmbBinlist *pMergeList = dmbBinlistCreate(mergeAllocator);
+
+    code = dmbBinListMerge(mergeAllocator, &pMergeList, pList, TRUE);
+    DMB_LOGD("push back code: %d\n", code);
+
+    dmbBinlistClear(allocator, &pList);
+
+    dmbBinlistPushBack(allocator, &pList, &item, TRUE);
+
+    for (i=0; i<64; ++i)
+    {
+        test_buf[i] = 'c';
+    }
+    DMB_BINITEM_STR(&item, test_buf, 64);
+    code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
+    DMB_LOGD("push back code: %d\n", code);
+
+    pEntry = dmbBinlistFirst(pList);
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+        {
+            dmbMemCopy(debugBuf, var.v.data, var.len);
+            debugBuf[var.len] = 0;
+            DMB_LOGD("second src str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
+        }
+        else
+            DMB_LOGD("second src int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
+
+    code = dmbBinListMerge(mergeAllocator, &pMergeList, pList, TRUE);
+    DMB_LOGD("push back code: %d\n", code);
+    pEntry = dmbBinlistFirst(pMergeList);
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+        {
+            dmbMemCopy(debugBuf, var.v.data, var.len);
+            debugBuf[var.len] = 0;
+            DMB_LOGD("merge list str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
+        }
+        else
+            DMB_LOGD("merge list int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
+
+
     dmbBinlistDestroy(allocator, pList);
+    dmbBinlistDestroy(mergeAllocator, pMergeList);
 #endif
 }

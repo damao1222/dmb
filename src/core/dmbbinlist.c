@@ -385,6 +385,8 @@ dmbCode dmbBinListMerge(dmbBinAllocator *pAllocator, dmbBinlist **pDestList, dmb
 
     dmbBinEntryLen(pDestLast, &uDestLen, &uDestAllLen);
     dmbBinEntryLen(pSrcFirst, &uSrcLen, &uSrcAllLen);
+    //if destlist is empty, no need to merge
+    mergeLast = mergeLast && (uDestLen != 0);
 
     if (mergeLast)
     {
@@ -598,16 +600,20 @@ dmbCode fixmem_realloc(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbUINT 
     dmbFixmemAllocator* fixmem = (dmbFixmemAllocator*)pAllocator->getData(pAllocator);
     dmbUINT left = fixmem->data.len - fixmem->data.offset;
     dmbUINT oldSize = BINLIST_SIZE(*pList);
-    dmbUINT need = *pLen - oldSize;
+    dmbUINT need = 0;
     dmbCode code = DMB_ERRCODE_OK;
-    if (need > left)
+    if (*pLen > oldSize)
     {
-        need = left;
-        code = DMB_ERRCODE_BINLIST_ALLOC_PART;
+        need = *pLen - oldSize;
+        if (need > left)
+        {
+            need = left;
+            code = DMB_ERRCODE_BINLIST_ALLOC_PART;
+        }
+        *pLen = oldSize + need;
     }
     *pList = fixmem->data.ptr;
-    *pLen = oldSize + need;
-    fixmem->data.offset += need;
+    fixmem->data.offset = *pLen;
 
     return code;
 }
