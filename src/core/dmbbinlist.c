@@ -67,7 +67,7 @@ const dmbUINT DMB_BINLIST_TAIL_SIZE = sizeof(dmbBYTE);
                     } while (0)
 #define BINLIST_LAST_LEN(LIST_PTR) (BINLIST_SIZE(LIST_PTR)-BINLIST_LAST(LIST_PTR)-DMB_BINLIST_TAIL_SIZE)
 
-static inline void dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *pAllLen);
+static inline dmbBOOL dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *pAllLen);
 static inline dmbBOOL setStrLen(dmbBinEntry *pEntry, dmbUINT uLen);
 
 dmbBinlist* dmbBinlistCreate(dmbBinAllocator *pAllocator)
@@ -147,8 +147,6 @@ dmbCode dmbBinlistPushBack(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbB
 }
 #endif
 
-#include "utils/dmblog.h"
-
 dmbCode dmbBinlistPushBack(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbBinItem *pItem, dmbBOOL bPart)
 {
     dmbUINT uLen, uAllLen, uCurrent, uLenNew, uAllLenNew, uAllocLen;
@@ -191,6 +189,11 @@ dmbCode dmbBinlistPushBack(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbB
         dmbUINT uBodyLen = uMemLen - (uAllLenNew - uLenNew);
         if ((uMemLen) < (uAllLenNew - uLenNew))
             return DMB_ERRCODE_BINLIST_NO_ENOUGH_SPACE;
+
+        if (uBodyLen != uLenNew && FALSE == setStrLen(pItem->entryhead, uBodyLen))
+        {
+            return DMB_ERRCODE_BINENTRY_SET_STRLEN_FAILED;
+        }
 
         pAllocator->memcpy(pAllocator, entry + uAllLen, pItem->entryhead, uAllLenNew - uLenNew);
         pAllocator->memcpy(pAllocator, entry + uAllLen + (uAllLenNew - uLenNew), pItem->data, uBodyLen);
@@ -238,13 +241,13 @@ void dmbBinlistDestroy(dmbBinAllocator *pAllocator, dmbBinlist *pList)
     pAllocator->free(pAllocator, pList);
 }
 
-static inline void dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *pAllLen)
+static inline dmbBOOL dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *pAllLen)
 {
     if (pEntry[0] == DMB_BINLIST_ENDCODE)
     {
         *pLen = 0;
         *pAllLen = 0;
-        return ;
+        return FALSE;
     }
 
     dmbBYTE encode = DMB_BINCODE(pEntry);
@@ -253,42 +256,43 @@ static inline void dmbBinEntryLen(dmbBinEntry *pEntry, dmbUINT *pLen, dmbUINT *p
     {
         *pLen = sizeof(dmbINT16);
         *pAllLen = *pLen + 1;
-        break;
+        return TRUE;
     }
     case DMB_BINCODE_I32:
     {
         *pLen = sizeof(dmbINT32);
         *pAllLen = *pLen + 1;
-        break;
+        return TRUE;
     }
     case DMB_BINCODE_I64:
     {
         *pLen = sizeof(dmbINT64);
         *pAllLen = *pLen + 1;
-        break;
+        return TRUE;
     }
     case DMB_BINCODE_TINYSTR:
     {
         *pLen = (*(dmbBYTE*)&pEntry[0]) & 0x3F;
         *pAllLen = *pLen + 1;
-        break;
+        return TRUE;
     }
     case DMB_BINCODE_STR:
     {
         *pLen = ((pEntry[0] & 0x3F) << 8) | pEntry[1];
         *pAllLen = *pLen + 2;
-        break;
+        return TRUE;
     }
     case DMB_BINCODE_LARGESTR:
     {
         *pLen = (pEntry[1] << 24) | (pEntry[2] << 16) | (pEntry[3] << 8) | pEntry[4];
         *pAllLen = *pLen + 5;
-        break;
+        return TRUE;
     }
     default:
         *pLen = 0;
         *pAllLen = 0;
     }
+    return FALSE;
 }
 
 inline dmbUINT dmbBinContentLen(dmbBinEntry *pEntry)
@@ -296,6 +300,11 @@ inline dmbUINT dmbBinContentLen(dmbBinEntry *pEntry)
     dmbUINT uLen, uAllLen;
     dmbBinEntryLen(pEntry, &uLen, &uAllLen);
     return uLen;
+}
+
+dmbBOOL dmbBinEntryIsEmpty(dmbBinEntry *pEntry)
+{
+    return dmbBinContentLen(pEntry) == 0;
 }
 
 dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var)

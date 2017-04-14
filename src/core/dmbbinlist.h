@@ -71,6 +71,7 @@ dmbBinEntry* dmbBinlistLast(dmbBinlist *pList);
 dmbBinEntry* dmbBinlistNext(dmbBinEntry *pEntry);
 void dmbBinlistDestroy(dmbBinAllocator *pAllocator, dmbBinlist *pList);
 dmbUINT dmbBinContentLen(dmbBinEntry *pEntry);
+dmbBOOL dmbBinEntryIsEmpty(dmbBinEntry *pEntry);
 dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var);
 dmbCode dmbBinEntryMerge(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbBinEntry *pDest, dmbBinEntry *pSrc, dmbBOOL bPart);
 dmbCode dmbBinListMerge(dmbBinAllocator *pAllocator, dmbBinlist **pDestList, dmbBinlist *pSrcList, dmbBOOL mergeLast);

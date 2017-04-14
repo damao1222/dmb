@@ -19,7 +19,7 @@
 #include "core/dmbbinlist.h"
 #include "utils/dmblog.h"
 
-#define TEST_DEFAULT_ALLCATOR
+//#define TEST_DEFAULT_ALLCATOR
 
 void dmbbinlist_test()
 {
@@ -75,6 +75,7 @@ void dmbbinlist_test()
 
 void dmbbinlist_merge_test()
 {
+#ifdef TEST_DEFAULT_ALLCATOR
     dmbBinAllocator *allocator = DMB_DEFAULT_BINALLOCATOR;
     dmbBinlist *pSrcList = dmbBinlistCreate(allocator);
     dmbBYTE test_buf[16384] = {0};
@@ -134,7 +135,7 @@ void dmbbinlist_merge_test()
     DMB_BINITEM_STR(&item, test_buf, 64);
     dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
 
-    int i=0;
+    dmbInt i=0;
     for (; i<1; ++i)
     {
         test_buf[i] = 'c';
@@ -163,4 +164,44 @@ void dmbbinlist_merge_test()
 
     dmbBinlistDestroy(allocator, pSrcList);
     dmbBinlistDestroy(allocator, pDestList);
+
+#else
+    dmbBYTE fixMem[100] = {0};
+    dmbFixmemAllocator fixallocator;
+    dmbBinAllocator *allocator = dmbInitFixmemAllocator(&fixallocator, fixMem, sizeof(fixMem));
+
+    dmbBinlist *pList = dmbBinlistCreate(allocator);
+    dmbBYTE test_buf[100] = {0};
+    dmbBinItem item;
+    dmbINT i=0;
+    for (; i<64; ++i)
+    {
+        test_buf[i] = 'a';
+    }
+    DMB_BINITEM_STR(&item, test_buf, 64);
+    dmbCode code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
+    DMB_LOGD("push back code: %d\n", code);
+
+    for (i=0; i<64; ++i)
+    {
+        test_buf[i] = 'b';
+    }
+    DMB_BINITEM_STR(&item, test_buf, 64);
+    code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
+    DMB_LOGD("push back code: %d\n", code);
+
+    dmbBinEntry *pEntry = dmbBinlistFirst(pList);
+    dmbBinVar var;
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+            DMB_LOGD("Srclist str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
+        else
+            DMB_LOGD("Srclist int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
+
+    dmbBinlistDestroy(allocator, pList);
+#endif
 }
