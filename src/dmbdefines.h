@@ -120,6 +120,15 @@ typedef dmbINT16 dmbCode;
 //存储到binlist已达最大容量上限
 #define DMB_ERRCODE_BINLIST_FULL 3113
 
+//binlist插入了一部分数据
+#define DMB_ERRCODE_BINLIST_INSERT_PART 3114
+
+//binentry是空的
+#define DMB_ERRCODE_BINENTRY_IS_EMPTY 3115
+
+//binentry设置string类型的长度失败
+#define DMB_ERRCODE_BINENTRY_SET_STRLEN_FAILED 3116
+
 //binlist的元素是字串
 #define DMB_ERRCODE_BINENTRY_IS_STR 3151
 

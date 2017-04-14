@@ -20,4 +20,6 @@
 
 void dmbbinlist_test();
 
+void dmbbinlist_merge_test();
+
 #endif // DMBBINLIST_TEST_H

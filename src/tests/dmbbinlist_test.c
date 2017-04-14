@@ -19,15 +19,15 @@
 #include "core/dmbbinlist.h"
 #include "utils/dmblog.h"
 
-//#define TEST_DEFAULT_ALLCATOR
+#define TEST_DEFAULT_ALLCATOR
 
 void dmbbinlist_test()
 {
 #ifdef TEST_DEFAULT_ALLCATOR
-    dmbBinAllocator *allocator = &DMB_DEFAULT_BINALLOCATOR;
+    dmbBinAllocator *allocator = DMB_DEFAULT_BINALLOCATOR;
 #else
-    dmbBYTE fixMem[20480] = {0};
-//    dmbBYTE fixMem[16384] = {0};
+//    dmbBYTE fixMem[20480] = {0};
+    dmbBYTE fixMem[16384] = {0};
     dmbFixmemAllocator fixallocator;
     dmbBinAllocator *allocator = dmbInitFixmemAllocator(&fixallocator, fixMem, sizeof(fixMem));
 #endif
@@ -36,25 +36,25 @@ void dmbbinlist_test()
     dmbBinItem item;
 
     DMB_BINITEM_I16(&item, 1);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, FALSE);
 
     DMB_BINITEM_I32(&item, 2);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, FALSE);
 
     DMB_BINITEM_I64(&item, 3);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, FALSE);
 
     test_buf[0] = 'a';
     DMB_BINITEM_STR(&item, test_buf, 2);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, FALSE);
 
     test_buf[0] = 'b';
     DMB_BINITEM_STR(&item, test_buf, 64);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, FALSE);
 
     test_buf[0] = 'c';
     DMB_BINITEM_STR(&item, test_buf, 16384);
-    dmbBinlistPushBack(allocator, pList, &item);
+    dmbBinlistPushBack(allocator, &pList, &item, TRUE);
 
     DMB_LOGD("Binlist len is %d\n", dmbBinlistLen(pList));
 
@@ -71,4 +71,96 @@ void dmbbinlist_test()
     }
 
     dmbBinlistDestroy(allocator, pList);
+}
+
+void dmbbinlist_merge_test()
+{
+    dmbBinAllocator *allocator = DMB_DEFAULT_BINALLOCATOR;
+    dmbBinlist *pSrcList = dmbBinlistCreate(allocator);
+    dmbBYTE test_buf[16384] = {0};
+    dmbBinItem item;
+
+//    DMB_BINITEM_I16(&item, 1);
+//    dmbBinlistPushBack(allocator, &pSrcList, &item, FALSE);
+
+//    DMB_BINITEM_I32(&item, 2);
+//    dmbBinlistPushBack(allocator, &pSrcList, &item, FALSE);
+
+//    DMB_BINITEM_I64(&item, 3);
+//    dmbBinlistPushBack(allocator, &pSrcList, &item, FALSE);
+
+    test_buf[0] = 'a';
+    DMB_BINITEM_STR(&item, test_buf, 2);
+    dmbBinlistPushBack(allocator, &pSrcList, &item, FALSE);
+
+    test_buf[0] = 'b';
+    DMB_BINITEM_STR(&item, test_buf, 64);
+    dmbBinlistPushBack(allocator, &pSrcList, &item, FALSE);
+
+    test_buf[0] = 'c';
+    DMB_BINITEM_STR(&item, test_buf, 16384);
+    dmbBinlistPushBack(allocator, &pSrcList, &item, TRUE);
+
+    DMB_LOGD("Srclist len is %d\n", dmbBinlistLen(pSrcList));
+
+    dmbBinEntry *pEntry = dmbBinlistFirst(pSrcList);
+    dmbBinVar var;
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+            DMB_LOGD("Srclist str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
+        else
+            DMB_LOGD("Srclist int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
+
+    dmbBinlist *pDestList = dmbBinlistCreate(allocator);
+
+    DMB_BINITEM_I16(&item, 1);
+    dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
+
+    DMB_BINITEM_I32(&item, 2);
+    dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
+
+    DMB_BINITEM_I64(&item, 3);
+    dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
+
+    test_buf[0] = 'a';
+    DMB_BINITEM_STR(&item, test_buf, 2);
+    dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
+
+    test_buf[0] = 'b';
+    DMB_BINITEM_STR(&item, test_buf, 64);
+    dmbBinlistPushBack(allocator, &pDestList, &item, FALSE);
+
+    int i=0;
+    for (; i<1; ++i)
+    {
+        test_buf[i] = 'c';
+    }
+    DMB_BINITEM_STR(&item, test_buf, 1);
+    dmbBinlistPushBack(allocator, &pDestList, &item, TRUE);
+
+    DMB_LOGD("dest list len is %d\n", dmbBinlistLen(pDestList));
+
+    dmbCode code = dmbBinListMerge(allocator, &pDestList, pSrcList, TRUE);
+
+    DMB_LOGD("dest merge error : %d, dest list len is %d\n", code, dmbBinlistLen(pDestList));
+
+    pEntry = dmbBinlistFirst(pDestList);
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+        {
+            DMB_LOGD("str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
+        }
+        else
+            DMB_LOGD("int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
+
+    dmbBinlistDestroy(allocator, pSrcList);
+    dmbBinlistDestroy(allocator, pDestList);
 }

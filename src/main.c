@@ -27,6 +27,7 @@ int main(int argc, char** argv)
     dmbSystemInit();
 
     dmbbinlist_test();
+    dmbbinlist_merge_test();
 
     sync();
 
