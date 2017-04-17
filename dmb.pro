@@ -17,7 +17,9 @@ SOURCES += \
     src/utils/dmblog.c \
     src/utils/dmbtime.c \
     src/utils/dmbfilesystem.c \
-    src/tests/dmbbinlist_test.c
+    src/tests/dmbbinlist_test.c \
+    src/core/dmbstring.c \
+    src/tests/dmbstring_test.c
     
 HEADERS += \ 
     src/dmbdefines.h \
@@ -31,7 +33,9 @@ HEADERS += \
     src/thread/dmbatomic.h \
     src/utils/dmbtime.h \
     src/utils/dmbfilesystem.h \
-    src/tests/dmbbinlist_test.h
+    src/tests/dmbbinlist_test.h \
+    src/core/dmbstring.h \
+    src/tests/dmbstring_test.h
 
 DEFINES += DMB_USE_JEMALLOC
 DEFINES += DMB_DEBUG

@@ -93,6 +93,12 @@ typedef dmbINT16 dmbCode;
 #define DMB_ERRCODE_ALLOC_FAILED 501
 //########601-700程序逻辑错误码####
 #define DMB_ERRCODE_NULL_POINTER 601
+//传入参数值错误
+#define DMB_ERRCODE_WRONG_ARGUMENT_VALUE 602
+//类型转换错误
+#define DMB_ERRCODE_CONVERT_TYPE_ERROR 603
+//超出缓存大小
+#define DMB_ERRCODE_OUT_OF_BUFF_BOUNDS 604
 
 //########2001-3000数据结构错误码########
 //########3101-3200 binlist相关错误码#####
