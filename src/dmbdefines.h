@@ -64,7 +64,7 @@ typedef dmbUINT8 dmbBYTE;
 
 #define DMB_UNUSED(x) ((void)x)
 
-void dmb_noop();
+extern void dmb_noop();
 
 #ifdef __compiler_offsetof
 #define DMB_OFFSETOF(TYPE, MEMBER) __compiler_offsetof(TYPE,MEMBER)

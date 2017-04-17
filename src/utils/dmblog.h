@@ -99,7 +99,7 @@ void dmbLogSystemInfo();
     //fatal
     #define DMB_FATAL(FORMAT, ARG...) dmbLog(LOGFATAL, "<%s:%d>(%s) \n"FORMAT, __FILE__, __LINE__, __FUNCTION__, ##ARG)
     //assert
-    #define DMB_ASSERT_X(cond, msg) ((!(cond)) ? dmbLog(LOGFATAL, "<%s:%d>(%s) \n%s", __FILE__, __LINE__, __FUNCTION__, msg) : cb_noop())
+    #define DMB_ASSERT_X(cond, FORMAT, ARG...) ((!(cond)) ? dmbLog(LOGFATAL, "<%s:%d>(%s) \n"FORMAT, __FILE__, __LINE__, __FUNCTION__, ##ARG) : dmb_noop())
 
 #else //!DMB_DEBUG
 

@@ -138,7 +138,7 @@ void dmbbinlist_merge_test()
     dmbBinlistDestroy(allocator, pDestList);
 
 #else
-    dmbBYTE fixMem[48] = {0};
+    dmbBYTE fixMem[32] = {0};
     dmbFixmemAllocator fixallocator;
     dmbBinAllocator *allocator = dmbInitFixmemAllocator(&fixallocator, fixMem, sizeof(fixMem));
     const dmbUINT TEST_SIZE = 64;
@@ -149,7 +149,7 @@ void dmbbinlist_merge_test()
 
     dmbBinlist *pList = dmbBinlistCreate(allocator);
     dmbBYTE test_datas[TEST_ARR_SIZE][TEST_SIZE];
-    int i = 0;
+    dmbUINT i = 0;
     for (i=0; i<TEST_ARR_SIZE; ++i)
     {
         dmbMemSet(test_datas[i], 'a' + i, TEST_SIZE);
@@ -182,11 +182,11 @@ void dmbbinlist_merge_test()
             DMB_LOGD("merge code: %d\n", mergeCode);
             dmbBinlistClear(allocator, &pList);
             if (mergeCode != DMB_ERRCODE_OK)
-                return -1;
+                return ;
         }
         else
         {
-//            return -1;
+            DMB_FATAL("fatal error: merge code: %d\n", mergeCode);
         }
     }
 
