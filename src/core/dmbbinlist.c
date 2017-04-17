@@ -370,6 +370,8 @@ dmbCode dmbBinEntryMerge(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbBin
     return code;
 }
 
+#include "utils/dmblog.h"
+
 dmbCode dmbBinListMerge(dmbBinAllocator *pAllocator, dmbBinlist **pDestList, dmbBinlist *pSrcList, dmbBOOL mergeLast)
 {
     dmbUINT uDestLen, uDestAllLen, uSrcLen, uSrcAllLen;
@@ -410,8 +412,17 @@ dmbCode dmbBinListMerge(dmbBinAllocator *pAllocator, dmbBinlist **pDestList, dmb
     pAllocator->memcpy(pAllocator, *pDestList + uDestListLen - DMB_BINLIST_TAIL_SIZE, pSrcList + uCpyOffset, uCpyLen);
 
     BINLIST_UPDATE_SIZE(*pDestList, uAllocLen);
-    BINLIST_UPDATE_LAST(*pDestList, BINLIST_LAST(*pDestList) + uDestAllLen + uCpyLen - BINLIST_LAST_LEN(pSrcList));
-    BINLIST_UPDATE_LEN(*pDestList, BINLIST_LEN(*pDestList) + BINLIST_LEN(pSrcList) + (mergeLast ? -1 : 0));
+    if (mergeLast)
+    {
+        if (BINLIST_LEN(pSrcList) > 1)
+            BINLIST_UPDATE_LAST(*pDestList, BINLIST_LAST(*pDestList) + uDestAllLen + uCpyLen - BINLIST_LAST_LEN(pSrcList));
+        BINLIST_UPDATE_LEN(*pDestList, BINLIST_LEN(*pDestList) + BINLIST_LEN(pSrcList) -1);
+    }
+    else
+    {
+        BINLIST_UPDATE_LAST(*pDestList, BINLIST_LAST(*pDestList) + uDestAllLen + uCpyLen - BINLIST_LAST_LEN(pSrcList));
+        BINLIST_UPDATE_LEN(*pDestList, BINLIST_LEN(*pDestList) + BINLIST_LEN(pSrcList));
+    }
     BINLIST_UPDATE_ENDCODE(*pDestList);
 
     return DMB_ERRCODE_OK;

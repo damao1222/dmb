@@ -22,6 +22,8 @@
 
 //#define TEST_DEFAULT_ALLCATOR
 
+static void printEntrys(const char *pcTag, dmbBinlist *pList);
+
 void dmbbinlist_test()
 {
 #ifdef TEST_DEFAULT_ALLCATOR
@@ -59,17 +61,7 @@ void dmbbinlist_test()
 
     DMB_LOGD("Binlist len is %d\n", dmbBinlistLen(pList));
 
-    dmbBinEntry *pEntry = dmbBinlistFirst(pList);
-    dmbBinVar var;
-    while (pEntry != NULL)
-    {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
-            DMB_LOGD("str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
-        else
-            DMB_LOGD("int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
-    }
+    printEntrys("list", pList);
 
     dmbBinlistDestroy(allocator, pList);
 }
@@ -105,17 +97,7 @@ void dmbbinlist_merge_test()
 
     DMB_LOGD("Srclist len is %d\n", dmbBinlistLen(pSrcList));
 
-    dmbBinEntry *pEntry = dmbBinlistFirst(pSrcList);
-    dmbBinVar var;
-    while (pEntry != NULL)
-    {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
-            DMB_LOGD("Srclist str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
-        else
-            DMB_LOGD("Srclist int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
-    }
+    printEntrys(pSrcList);
 
     dmbBinlist *pDestList = dmbBinlistCreate(allocator);
 
@@ -150,116 +132,85 @@ void dmbbinlist_merge_test()
 
     DMB_LOGD("dest merge error : %d, dest list len is %d\n", code, dmbBinlistLen(pDestList));
 
-    pEntry = dmbBinlistFirst(pDestList);
-    while (pEntry != NULL)
-    {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
-        {
-            DMB_LOGD("str: code: %x value: %s\n", DMB_BINCODE(pEntry), var.v.data);
-        }
-        else
-            DMB_LOGD("int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
-    }
+    printEntrys(pDestList);
 
     dmbBinlistDestroy(allocator, pSrcList);
     dmbBinlistDestroy(allocator, pDestList);
 
 #else
-    dmbBYTE fixMem[100] = {0};
+    dmbBYTE fixMem[48] = {0};
     dmbFixmemAllocator fixallocator;
     dmbBinAllocator *allocator = dmbInitFixmemAllocator(&fixallocator, fixMem, sizeof(fixMem));
-
-    dmbBinlist *pList = dmbBinlistCreate(allocator);
-    dmbBYTE test_buf[100] = {0};
-    dmbBinItem item;
-    dmbINT i=0;
-    for (; i<64; ++i)
-    {
-        test_buf[i] = 'a';
-    }
-    DMB_BINITEM_STR(&item, test_buf, 64);
-    dmbCode code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
-    DMB_LOGD("push back code: %d\n", code);
-
-    for (i=0; i<64; ++i)
-    {
-        test_buf[i] = 'b';
-    }
-    DMB_BINITEM_STR(&item, test_buf, 64);
-    code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
-    DMB_LOGD("push back code: %d\n", code);
-
-    dmbBinEntry *pEntry = dmbBinlistFirst(pList);
-    dmbBinVar var;
-    dmbBYTE debugBuf[65];
-    while (pEntry != NULL)
-    {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
-        {
-            dmbMemCopy(debugBuf, var.v.data, var.len);
-            debugBuf[var.len] = 0;
-            DMB_LOGD("first src str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
-        }
-        else
-            DMB_LOGD("first src int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
-    }
+    const dmbUINT TEST_SIZE = 64;
+    const dmbUINT TEST_ARR_SIZE = 3;
 
     dmbBinAllocator *mergeAllocator = DMB_DEFAULT_BINALLOCATOR;
     dmbBinlist *pMergeList = dmbBinlistCreate(mergeAllocator);
 
-    code = dmbBinListMerge(mergeAllocator, &pMergeList, pList, TRUE);
-    DMB_LOGD("push back code: %d\n", code);
-
-    dmbBinlistClear(allocator, &pList);
-
-    dmbBinlistPushBack(allocator, &pList, &item, TRUE);
-
-    for (i=0; i<64; ++i)
+    dmbBinlist *pList = dmbBinlistCreate(allocator);
+    dmbBYTE test_datas[TEST_ARR_SIZE][TEST_SIZE];
+    int i = 0;
+    for (i=0; i<TEST_ARR_SIZE; ++i)
     {
-        test_buf[i] = 'c';
+        dmbMemSet(test_datas[i], 'a' + i, TEST_SIZE);
     }
-    DMB_BINITEM_STR(&item, test_buf, 64);
-    code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
-    DMB_LOGD("push back code: %d\n", code);
 
-    pEntry = dmbBinlistFirst(pList);
-    while (pEntry != NULL)
+    dmbBinItem item;
+    dmbCode code = DMB_ERRCODE_OK, mergeCode;
+
+    for (i=0; i<TEST_ARR_SIZE; )
     {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
+        if (code == DMB_ERRCODE_OK)
+            DMB_BINITEM_STR(&item, test_datas[i], TEST_SIZE);
+
+        code = dmbBinlistPushBack(allocator, &pList, &item, TRUE);
+        DMB_LOGD("push back code: %d\n", code);
+        if (code == DMB_ERRCODE_OK)
         {
-            dmbMemCopy(debugBuf, var.v.data, var.len);
-            debugBuf[var.len] = 0;
-            DMB_LOGD("second src str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
+            ++i;
+            if (i < TEST_ARR_SIZE)
+                continue;
+        }
+
+        if (code == DMB_ERRCODE_BINLIST_INSERT_PART || code == DMB_ERRCODE_OK)
+        {
+            mergeCode = dmbBinListMerge(mergeAllocator, &pMergeList, pList, TRUE);
+            DMB_LOGD("==============================================\n");
+            printEntrys("src list", pList);
+            DMB_LOGD("----------------------------------------------\n");
+            printEntrys("merge list", pMergeList);
+            DMB_LOGD("merge code: %d\n", mergeCode);
+            dmbBinlistClear(allocator, &pList);
+            if (mergeCode != DMB_ERRCODE_OK)
+                return -1;
         }
         else
-            DMB_LOGD("second src int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
-    }
-
-    code = dmbBinListMerge(mergeAllocator, &pMergeList, pList, TRUE);
-    DMB_LOGD("push back code: %d\n", code);
-    pEntry = dmbBinlistFirst(pMergeList);
-    while (pEntry != NULL)
-    {
-        dmbBinEntryGet(pEntry, &var);
-        if (DMB_BINENTRY_IS_STR(pEntry))
         {
-            dmbMemCopy(debugBuf, var.v.data, var.len);
-            debugBuf[var.len] = 0;
-            DMB_LOGD("merge list str: code: %x value: %s\n", DMB_BINCODE(pEntry), debugBuf);
+//            return -1;
         }
-        else
-            DMB_LOGD("merge list int: code: %x value: %lld\n", DMB_BINCODE(pEntry), var.v.i64);
-        pEntry = dmbBinlistNext(pEntry);
     }
-
 
     dmbBinlistDestroy(allocator, pList);
     dmbBinlistDestroy(mergeAllocator, pMergeList);
 #endif
+}
+
+static void  printEntrys(const char *pcTag, dmbBinlist *pList)
+{
+    dmbBYTE debugBuf[40960];
+    dmbBinVar var;
+    dmbBinEntry *pEntry = dmbBinlistFirst(pList);
+    while (pEntry != NULL)
+    {
+        dmbBinEntryGet(pEntry, &var);
+        if (DMB_BINENTRY_IS_STR(pEntry))
+        {
+            dmbMemCopy(debugBuf, var.v.data, var.len);
+            debugBuf[var.len] = 0;
+            DMB_LOGD("%s: code: %x value: %s\n", pcTag, DMB_BINCODE(pEntry), debugBuf);
+        }
+        else
+            DMB_LOGD("%s: code: %x value: %lld\n", pcTag, DMB_BINCODE(pEntry), var.v.i64);
+        pEntry = dmbBinlistNext(pEntry);
+    }
 }
