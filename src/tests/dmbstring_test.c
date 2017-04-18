@@ -47,5 +47,23 @@ void dmbstring_test()
     DMB_LOGD("Last Index of \"12\" is %d\n", index);
 
     dmbStringDestroy(pStr);
+
+    dmbLONG lValue;
+    dmbString2Long("-8317687561", &lValue);
+    DMB_LOGD("dmbString2Long %ld\n", lValue);
+
+    dmbCHAR strValue[256]= {0};
+    dmbUINT uStrLen = 256;
+    dmbLong2Str(lValue, strValue, &uStrLen);
+    DMB_LOGD("dmbLong2Str %s %d\n", strValue, uStrLen);
+
+    pStr = dmbStringCreateWithBuffer(strValue, uStrLen);
+    DMB_LOGD("dmbStringCreateWithBuffer str is %s\n", dmbStringGet(pStr));
+    dmbStringDestroy(pStr);
+
+    pStr = dmbStringCreateWithFormat(256, "this is a test %x %s\n", 0xabcd1234, "yes!");
+    DMB_LOGD("dmbStringCreateWithFormat str is %s\n", dmbStringGet(pStr));
+
+    dmbStringDestroy(pStr);
 }
 

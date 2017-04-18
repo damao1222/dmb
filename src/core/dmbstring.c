@@ -21,6 +21,8 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #if defined(DMB_USE_FAST_STRSTR)
 #include "fast_strstr.h"
@@ -30,6 +32,8 @@
 #else
 #define dmb_strstr(h,n)	strstr((h),(n))
 #endif
+
+#define dmb_strlen(s) strlen(s)
 
 static dmbCode insert(dmbString *pDestStr, const dmbCHAR *pStr, dmbUINT uPos, dmbUINT uLen) ;
 static dmbINT indexOfFrom(const dmbCHAR *pSrcStr, dmbUINT uSrcLen, const dmbCHAR *pStr, dmbUINT uLen, dmbUINT uFrom)
@@ -86,6 +90,18 @@ dmbString* dmbStringCreateWithBuffer(const dmbCHAR* pcBuf, dmbUINT uLen)
         dmbMemCopy(pStr->data, pcBuf, uLen);
     }
     return pStr;
+}
+
+dmbString* dmbStringCreateWithFormat(dmbUINT uLen, const char*format, ...)
+{
+    dmbCHAR pcBuf[uLen];
+    dmbMemSet(pcBuf, 0, uLen);
+    va_list ap;
+    va_start(ap, format);
+    vsnprintf(pcBuf, uLen, format, ap);
+    va_end(ap);
+
+    return dmbStringCreateWithBuffer(pcBuf, dmb_strlen(pcBuf));
 }
 
 void dmbStringDestroy(dmbString *pStr)

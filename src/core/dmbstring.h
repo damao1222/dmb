@@ -30,6 +30,8 @@ dmbString* dmbStringCreate(dmbUINT uLen);
 
 dmbString* dmbStringCreateWithBuffer(const dmbCHAR* pcBuf, dmbUINT uLen);
 
+dmbString* dmbStringCreateWithFormat(dmbUINT uLen, const char*format, ...);
+
 void dmbStringDestroy(dmbString *pStr);
 
 void dmbStringClear(dmbString *pStr);
