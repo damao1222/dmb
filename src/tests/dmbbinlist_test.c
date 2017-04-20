@@ -205,12 +205,12 @@ static void  printEntrys(const char *pcTag, dmbBinlist *pList)
         dmbBinEntryGet(pEntry, &var);
         if (DMB_BINENTRY_IS_STR(pEntry))
         {
-            dmbMemCopy(debugBuf, var.v.data, var.len);
+            dmbMemCopy(debugBuf, var.data, var.len);
             debugBuf[var.len] = 0;
             DMB_LOGD("%s: code: %x value: %s\n", pcTag, DMB_BINCODE(pEntry), debugBuf);
         }
         else
-            DMB_LOGD("%s: code: %x value: %lld\n", pcTag, DMB_BINCODE(pEntry), var.v.i64);
+            DMB_LOGD("%s: code: %x value: %lld\n", pcTag, DMB_BINCODE(pEntry), var.i64);
         pEntry = dmbBinlistNext(pEntry);
     }
 }

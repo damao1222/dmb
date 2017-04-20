@@ -57,6 +57,7 @@ typedef dmbUINT8 dmbBOOL;
 typedef size_t dmbSIZE;
 typedef char dmbCHAR;
 typedef dmbUINT8 dmbBYTE;
+typedef volatile dmbLONG dmbRef;
 
 #ifndef NULL
 #define NULL 0

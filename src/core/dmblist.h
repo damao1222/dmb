@@ -25,6 +25,13 @@ typedef struct dmbNode
     struct dmbNode *pNext, *pPrev;
 } dmbList, dmbNode;
 
+typedef struct dmbListIter
+{
+    dmbBOOL reverse;
+    dmbNode *pNode;
+    dmbList *pList;
+} dmbListIter;
+
 /**
  * @brief 创建一个双向链表，使用者负责调用CBDLListDestroy销毁
  * 时间复杂度：O(1)
@@ -139,6 +146,28 @@ void dmbListRemoveAll(dmbList *pHead);
  * @param pSrc 被合并的源链表
  */
 void dmbListMerge(dmbList *pDest, dmbList *pSrc);
+
+/**
+ * @brief dmbListInitIter 初始化迭代器
+ * @param pList 链表指针
+ * @param pIter 迭代器
+ * @param reverse 是否反向迭代
+ */
+void dmbListInitIter(dmbList *pList, dmbListIter *pIter, dmbBOOL reverse);
+
+/**
+ * @brief dmbListNext 移动到下个节点
+ * @param pIter 迭代器
+ * @return 成功返回TRUE，遍历完毕返回FALSE
+ */
+dmbBOOL dmbListNext(dmbListIter *pIter);
+
+/**
+ * @brief dmbListGet 从迭代器中获得节点
+ * @param pIter 迭代器
+ * @return 节点指针
+ */
+dmbNode* dmbListGet(dmbListIter *pIter);
 
 /**
  * @brief 根据节点获得实际数据结构指针

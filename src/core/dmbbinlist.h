@@ -48,7 +48,7 @@ typedef struct dmbBinVar {
         dmbINT16 i16;
         dmbINT32 i32;
         dmbINT64 i64;
-    } v;
+    };
     dmbUINT len;
 } dmbBinVar;
 

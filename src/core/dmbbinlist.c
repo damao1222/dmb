@@ -313,13 +313,13 @@ dmbCode dmbBinEntryGet(dmbBinEntry *pEntry, dmbBinVar *var)
     dmbBinEntryLen(pEntry, &uLen, &uAllLen);
     if (DMB_BINENTRY_IS_STR(pEntry))
     {
-        var->v.data = pEntry + (uAllLen - uLen);
+        var->data = pEntry + (uAllLen - uLen);
     }
     else
     {
         dmbINT64 i64 = 0;
         dmbMemCopy(&i64, pEntry + (uAllLen - uLen), uLen);
-        dmbInt64ToByte((dmbBYTE*)&var->v.i64, i64);
+        dmbInt64ToByte((dmbBYTE*)&var->i64, i64);
     }
     var->len = uLen;
 

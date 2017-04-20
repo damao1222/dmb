@@ -33,10 +33,7 @@ static inline void insert(dmbNode * pNew, dmbNode *pPrev, dmbNode *pNext)
  */
 void dmbListInit(dmbList *pHead)
 {
-	if (pHead != NULL)
-	{
-		pHead->pNext = pHead->pPrev = pHead;
-	}
+    pHead->pNext = pHead->pPrev = pHead;
 }
 
 /**
@@ -47,7 +44,7 @@ void dmbListInit(dmbList *pHead)
  */
 dmbBOOL dmbListIsEmpty(dmbList *pHead)
 {
-	return pHead == NULL ? TRUE : pHead->pNext == pHead;
+    return pHead->pNext == pHead;
 }
 
 /**
@@ -139,38 +136,35 @@ dmbNode* dmbListPopBack(dmbList *pHead)
  */
 dmbBOOL dmbListInsert(dmbList *pHead, dmbNode *pNode, dmbINT iIndex)
 {
-	if (pHead != NULL && pNode != NULL)
-	{
-		if (iIndex < 0)
-		{
-			iIndex = -iIndex - 1;
-            dmbINT i = 0;
-            dmbNode *pCurrent;
-            dmbListForeachReverse(pCurrent, pHead)
-			{
-				if (i == iIndex)
-				{
-					insert(pNode, pCurrent, pCurrent->pNext);
-					return TRUE;
-				}
-				++i;
-			}
-		}
-		else
-		{
-            dmbINT i = 0;
-            dmbNode *pCurrent;
-            dmbListForeach(pCurrent, pHead)
-			{
-				if (i == iIndex)
-				{
-					insert(pNode, pCurrent->pPrev, pCurrent);
-					return TRUE;
-				}
-				++i;
-			}
-		}
-	}
+    if (iIndex < 0)
+    {
+        iIndex = -iIndex - 1;
+        dmbINT i = 0;
+        dmbNode *pCurrent;
+        dmbListForeachReverse(pCurrent, pHead)
+        {
+            if (i == iIndex)
+            {
+                insert(pNode, pCurrent, pCurrent->pNext);
+                return TRUE;
+            }
+            ++i;
+        }
+    }
+    else
+    {
+        dmbINT i = 0;
+        dmbNode *pCurrent;
+        dmbListForeach(pCurrent, pHead)
+        {
+            if (i == iIndex)
+            {
+                insert(pNode, pCurrent->pPrev, pCurrent);
+                return TRUE;
+            }
+            ++i;
+        }
+    }
 	return FALSE;
 }
 
@@ -184,33 +178,29 @@ dmbBOOL dmbListInsert(dmbList *pHead, dmbNode *pNode, dmbINT iIndex)
  */
 dmbINT dmbListRemoveRange(dmbList *pHead, dmbINT iStart, dmbINT iEnd)
 {
-	if (pHead != NULL)
-	{
-        if (iStart < 0 || iEnd < 0 || iStart > iEnd || dmbListIsEmpty(pHead))
-			return 0;
+    if (iStart < 0 || iEnd < 0 || iStart > iEnd || dmbListIsEmpty(pHead))
+        return 0;
 
-        dmbINT i = 0;
-        dmbNode *pStart = NULL, *pEnd = NULL;
-        dmbListForeach(pEnd, pHead)
-		{
-			if (i == iStart)
-				pStart = pEnd->pPrev;
+    dmbINT i = 0;
+    dmbNode *pStart = NULL, *pEnd = NULL;
+    dmbListForeach(pEnd, pHead)
+    {
+        if (i == iStart)
+            pStart = pEnd->pPrev;
 
-			if (i == iEnd)
-			{
-				pEnd = pEnd->pNext;
-				break;
-			}
+        if (i == iEnd)
+        {
+            pEnd = pEnd->pNext;
+            break;
+        }
 
-			++i;
-		}
+        ++i;
+    }
 
-		pStart->pNext = pEnd;
-		pEnd->pPrev = pStart;
+    pStart->pNext = pEnd;
+    pEnd->pPrev = pStart;
 
-		return iEnd - iStart + 1;
-	}
-	return 0;
+    return iEnd - iStart + 1;
 }
 
 /**
@@ -220,13 +210,10 @@ dmbINT dmbListRemoveRange(dmbList *pHead, dmbINT iStart, dmbINT iEnd)
  */
 void dmbListRemove(dmbNode *pNode)
 {
-	if (pNode != NULL)
-	{
-		pNode->pNext->pPrev = pNode->pPrev;
-		pNode->pPrev->pNext = pNode->pNext;
-		pNode->pNext = NULL;
-		pNode->pPrev = NULL;
-	}
+    pNode->pNext->pPrev = pNode->pPrev;
+    pNode->pPrev->pNext = pNode->pNext;
+    pNode->pNext = NULL;
+    pNode->pPrev = NULL;
 }
 
 /**dmbListRemoveRange
@@ -248,10 +235,7 @@ dmbBOOL dmbListRemoveAt(dmbList *pHead, dmbINT iIndex)
  */
 void dmbListRemoveAll(dmbList *pHead)
 {
-	if (pHead)
-	{
-		pHead->pNext = pHead->pPrev = pHead;
-	}
+    pHead->pNext = pHead->pPrev = pHead;
 }
 
 /**
@@ -262,7 +246,7 @@ void dmbListRemoveAll(dmbList *pHead)
  */
 void dmbListMerge(dmbList *pDest, dmbList *pSrc)
 {
-    if (pDest && !dmbListIsEmpty(pSrc))
+    if (!dmbListIsEmpty(pSrc))
 	{
 		pDest->pPrev->pNext = pSrc->pNext;
 		pSrc->pNext->pPrev = pDest->pPrev;
@@ -275,6 +259,52 @@ void dmbListMerge(dmbList *pDest, dmbList *pSrc)
 }
 
 /**
+ * @brief dmbListInitIter 初始化迭代器
+ * @param pList 链表指针
+ * @param pIter 迭代器
+ * @param reverse 是否反向迭代
+ */
+void dmbListInitIter(dmbList *pList, dmbListIter *pIter, dmbBOOL reverse)
+{
+    pIter->pList = pIter->pNode = pList;
+    pIter->reverse = reverse;
+}
+
+/**
+ * @brief dmbListNext 移动到下个节点
+ * @param pIter 迭代器
+ * @return 成功返回TRUE，遍历完毕返回FALSE
+ */
+dmbBOOL dmbListNext(dmbListIter *pIter)
+{
+    if (pIter->reverse)
+    {
+        pIter->pNode = pIter->pNode->pPrev;
+    }
+    else
+    {
+        pIter->pNode = pIter->pNode->pNext;
+    }
+
+    if (pIter->pNode == pIter->pList)
+    {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ * @brief dmbListGet 从迭代器中获得节点
+ * @param pIter 迭代器
+ * @return 节点指针
+ */
+inline dmbNode* dmbListGet(dmbListIter *pIter)
+{
+    return pIter->pNode;
+}
+
+/**
  * @brief 依次遍历到指定索引然后返回索引位置的数据，如果需要依次取数据，则使用迭代器CBListCreateIterator
  * 时间复杂度：O(n)
  * @param pHead 双向链表的头指针
@@ -283,32 +313,29 @@ void dmbListMerge(dmbList *pDest, dmbList *pSrc)
  */
 dmbNode* CBListGet(dmbList *pHead, dmbINT iIndex)
 {
-	if (pHead != NULL)
-	{
-		if (iIndex < 0)
-		{
-			iIndex = -iIndex - 1;
-            dmbINT i = 0;
-            dmbNode *pCurrent;
-            dmbListForeachReverse(pCurrent, pHead)
-			{
-				if (i == iIndex)
-					return pCurrent;
-				++i;
-			}
-		}
-		else
-		{
-            dmbINT i = 0;
-            dmbNode *pCurrent;
-            dmbListForeach(pCurrent, pHead)
-			{
-				if (i == iIndex)
-					return pCurrent;
-				++i;
-			}
-		}
-	}
+    if (iIndex < 0)
+    {
+        iIndex = -iIndex - 1;
+        dmbINT i = 0;
+        dmbNode *pCurrent;
+        dmbListForeachReverse(pCurrent, pHead)
+        {
+            if (i == iIndex)
+                return pCurrent;
+            ++i;
+        }
+    }
+    else
+    {
+        dmbINT i = 0;
+        dmbNode *pCurrent;
+        dmbListForeach(pCurrent, pHead)
+        {
+            if (i == iIndex)
+                return pCurrent;
+            ++i;
+        }
+    }
 
 	return NULL;
 }
