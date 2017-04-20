@@ -278,7 +278,7 @@ dmbCode dmbDLListScan(dmbDLList *pList, dmbUINT* uIndex, dmbUINT uCount, dmbDLLi
     dmbCode code = DMB_ERRCODE_OK;
     dmbUINT i = 0, done = *uIndex + uCount;
     dmbListIter iter;
-    dmbListInitIter(&pList->head, &iter, TRUE);
+    dmbListInitIter(&pList->head, &iter, FALSE);
     while (done > i)
     {
         if (!dmbListNext(&iter))
@@ -289,7 +289,7 @@ dmbCode dmbDLListScan(dmbDLList *pList, dmbUINT* uIndex, dmbUINT uCount, dmbDLLi
 
         if (i >= *uIndex)
         {
-            code = dmbDLListPushBack(pDestList, dmbDLListEntry(dmbListGet(&iter))->obj);
+            code = dmbDLListPushBack(*pDestList, dmbDLListEntry(dmbListGet(&iter))->obj);
             if (code != DMB_ERRCODE_OK)
             {
                 return code;
@@ -299,7 +299,24 @@ dmbCode dmbDLListScan(dmbDLList *pList, dmbUINT* uIndex, dmbUINT uCount, dmbDLLi
         ++i;
     }
 
-    *uIndex = i;
+    *uIndex = i >= pList->len - 1 ? 0 : i;
 
     return code;
+}
+
+void dmbDLListInitIter(dmbDLList *pList, dmbDLListIter *pIter, dmbBOOL reverse)
+{
+    dmbListInitIter(&pList->head, pIter, reverse);
+}
+
+dmbBOOL dmbDLListNext(dmbDLListIter *pIter)
+{
+    return dmbListNext(pIter);
+}
+
+dmbObject* dmbDLListGetRef(dmbDLListIter *pIter)
+{
+    dmbObject *p = dmbDLListEntry(dmbListGet(pIter))->obj;
+    dmbObjectRetain(p);
+    return p;
 }

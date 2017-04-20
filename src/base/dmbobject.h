@@ -31,6 +31,9 @@
 
 #define DMB_OBJ_TYPE_END                 7//终止
 
+#define DMB_OBJ_ENCODE_INT           101
+#define DMB_OBJ_ENCODE_STRING        102
+
 typedef struct {
     dmbRef ref;
     dmbUINT32 type : 4;
@@ -44,6 +47,8 @@ typedef struct {
 dmbBOOL dmbObjectRetain(dmbObject *o);
 dmbBOOL dmbObjectRelease(dmbObject *o);
 
+dmbObject* dmbCreateIntObject(dmbLONG lValue);
+dmbObject* dmbCreateStringObject(dmbCHAR *pcStr, dmbUINT uLen);
 void dmbDestroyIntObject(dmbObject *o);
 void dmbDestroyStringObject(dmbObject *o);
 void dmbDestroyListObject(dmbObject *o);

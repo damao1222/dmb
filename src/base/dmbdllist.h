@@ -31,6 +31,8 @@ typedef struct {
     dmbUINT len;
 } dmbDLList;
 
+typedef dmbListIter dmbDLListIter;
+
 void dmbDLListInit(dmbDLList *pList);
 void dmbDLListClear(dmbDLList *pList);
 dmbDLList* dmbDLListCreate();
@@ -38,7 +40,19 @@ void dmbDLListDestroy(dmbDLList *pList);
 
 dmbCode dmbDLListPushBack(dmbDLList *pList, dmbObject *pObject);
 dmbCode dmbDLListPushFront(dmbDLList *pList, dmbObject *pObject);
+
+/**
+ * @brief dmbDLListPopBack 需要手动release
+ * @param pList
+ * @return
+ */
 dmbObject* dmbDLListPopBack(dmbDLList *pList);
+
+/**
+ * @brief dmbDLListPopFront 需要手动release
+ * @param pList
+ * @return
+ */
 dmbObject* dmbDLListPopFront(dmbDLList *pList);
 
 dmbUINT dmbDLListSize(dmbDLList *pList);
@@ -50,6 +64,19 @@ dmbBOOL dmbDLListRemoveAt(dmbDLList *pList, dmbUINT uIndex);
 dmbCode dmbDLListGetRange(dmbDLList *pList, dmbUINT uStart, dmbUINT uEnd, dmbDLList* pDestList);
 dmbCode dmbDLListScan(dmbDLList *pList, dmbUINT* uIndex, dmbUINT uCount, dmbDLList** pDestList);
 
+void dmbDLListInitIter(dmbDLList *pList, dmbDLListIter *pIter, dmbBOOL reverse);
+dmbBOOL dmbDLListNext(dmbDLListIter *pIter);
+
+/**
+ * @brief dmbDLListGetRef 需要手动release
+ * @param pIter
+ * @return
+ */
+dmbObject* dmbDLListGetRef(dmbDLListIter *pIter);
+
 #define dmbDLListEntry(pos) \
             dmbListEntry(pos, dmbDLEntry, iter)
+
+#define dmbDLListForeach(pos, list) \
+            dmbListForeachEntry(pos, &list->head, iter)
 #endif // DMBDLLIST_H

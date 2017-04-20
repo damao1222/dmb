@@ -18,6 +18,8 @@
 #include "dmbobject.h"
 #include "utils/dmblog.h"
 #include "thread/dmbatomic.h"
+#include "core/dmballoc.h"
+#include "core/dmbstring.h"
 
 static dmbBOOL checkType(dmbObject *pObj)
 {
@@ -74,32 +76,66 @@ dmbBOOL dmbObjectRelease(dmbObject *pObj)
     return FALSE;
 }
 
+dmbObject* dmbCreateIntObject(dmbLONG lValue)
+{
+    dmbObject *o = (dmbObject*)dmbMalloc(sizeof(dmbObject));
+    if (o != NULL)
+    {
+        o->type = DMB_OBJ_TYPE_INT;
+        o->encode = DMB_OBJ_ENCODE_INT;
+        o->ref = 1;
+        o->num = lValue;
+    }
+    return o;
+}
+
+dmbObject* dmbCreateStringObject(dmbCHAR *pcStr, dmbUINT uLen)
+{
+    dmbObject *o = (dmbObject*)dmbMalloc(sizeof(dmbObject));
+    if (o != NULL)
+    {
+        o->ptr = dmbStringCreateWithBuffer(pcStr, uLen);
+        if (o->ptr == NULL)
+        {
+            dmbFree(o);
+            return NULL;
+        }
+
+        o->type = DMB_OBJ_TYPE_STRING;
+        o->encode = DMB_OBJ_ENCODE_STRING;
+        o->ref = 1;
+    }
+    return o;
+}
+
 void dmbDestroyIntObject(dmbObject *o)
 {
-
+    dmbFree(o);
 }
 
 void dmbDestroyStringObject(dmbObject *o)
 {
-
+    if (o->encode == DMB_OBJ_ENCODE_STRING)
+        dmbStringDestroy(o->ptr);
+    dmbFree(o);
 }
 
 void dmbDestroyListObject(dmbObject *o)
 {
-
+    DMB_UNUSED(o);
 }
 
 void dmbDestroySetObject(dmbObject *o)
 {
-
+    DMB_UNUSED(o);
 }
 
 void dmbDestroyZsetObject(dmbObject *o)
 {
-
+    DMB_UNUSED(o);
 }
 
 void dmbDestroyMapObject(dmbObject *o)
 {
-
+    DMB_UNUSED(o);
 }
