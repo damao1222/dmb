@@ -24,6 +24,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "dmbtime.h"
+#include "utils/dmbioutil.h"
 
 #define MSG_BUFFER_SIZE 4096
 #define DMB_LOG_FILENAME "dmb.log"
@@ -40,7 +41,7 @@ static dmbBOOL Output2File(const char *pcMsg)
 {
     if (g_log_fd != -1)
     {
-        return write(g_log_fd, (void*)pcMsg, strlen(pcMsg)) != -1;
+        return dmbSafeWrite(g_log_fd, (void*)pcMsg, strlen(pcMsg)) != -1;
     }
     return FALSE;
 }

@@ -88,6 +88,8 @@ typedef dmbINT16 dmbCode;
 #define DMB_ERRCODE_OK DMB_OK
 
 //########11-50网络错误码#######
+#define DMB_ERRCODE_NETWORK_ERROR 501
+#define DMB_ERRCODE_NETWORK_AGAIN 502
 
 //########501-600系统操作错误码####
 //内存分配失败

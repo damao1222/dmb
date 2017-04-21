@@ -23,7 +23,8 @@ SOURCES += \
     src/base/dmbcommand.c \
     src/base/dmbobject.c \
     src/base/dmbdllist.c \
-    src/tests/dmbdllist_test.c
+    src/tests/dmbdllist_test.c \
+    src/network/dmbnetwork.c
     
 HEADERS += \ 
     src/dmbdefines.h \
@@ -43,7 +44,9 @@ HEADERS += \
     src/base/dmbcommand.h \
     src/base/dmbobject.h \
     src/base/dmbdllist.h \
-    src/tests/dmbdllist_test.h
+    src/tests/dmbdllist_test.h \
+    src/network/dmbnetwork.h \
+    src/utils/dmbioutil.h
 
 DEFINES += DMB_USE_JEMALLOC
 DEFINES += DMB_DEBUG
