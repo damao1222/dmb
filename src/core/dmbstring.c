@@ -85,6 +85,7 @@ dmbString* dmbStringCreateWithBuffer(const dmbCHAR* pcBuf, dmbUINT uLen)
     if (pStr != NULL)
     {
         dmbMemCopy(pStr->data, pcBuf, uLen);
+        pStr->len = uLen;
     }
     return pStr;
 }

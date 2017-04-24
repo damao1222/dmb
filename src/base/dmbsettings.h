@@ -15,38 +15,25 @@
     limitations under the License.
 */
 
+#ifndef DMBSETTINGS_H
+#define DMBSETTINGS_H
+
 #include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include "base/dmbsettings.h"
-#include <unistd.h>
-#include "utils/dmblog.h"
 
-#include "tests/dmbbinlist_test.h"
-#include "tests/dmbstring_test.h"
-#include "tests/dmbdllist_test.h"
-#include "tests/dmbutils_test.h"
+typedef struct dmbSettings{
+    dmbCHAR host[16];
+    dmbINT port;
+    dmbINT listen_backlog;
+    dmbINT open_files;
+    dmbINT thread_size;
+    dmbUINT net_read_bufsize;
+    dmbUINT net_write_bufsize;
+} dmbSettings;
 
-int main(int argc, char** argv)
-{
-    DMB_UNUSED(argc);
-    DMB_UNUSED(argv);
+void dmbResetDefaultSettings();
 
-    dmbSystemInit();
+dmbCode dmbLoadSettings(const dmbCHAR *confPath);
 
-    dmbLoadSettings(NULL);
+extern dmbSettings g_settings;
 
-//    dmbbinlist_test();
-//    dmbbinlist_merge_test();
-//    dmbstring_test();
-    dmbdllist_test();
-    dmbutils_test();
-
-    sync();
-
-    dmbLogSystemInfo();
-
-    return DMB_OK;
-}
-
-inline void dmb_noop()
-{}
+#endif // DMBSETTINGS_H

@@ -28,6 +28,11 @@ dmbBOOL IsAppQuit()
     return g_app_run;
 }
 
+void dmbStopApp()
+{
+    g_app_run = FALSE;
+}
+
 dmbCode dmbInitAcceptThread()
 {
     dmbThreadInit(&g_accept_thread, acceptThreadImpl, IsAppQuit);

@@ -35,4 +35,6 @@ void dmbInt16ToByte(dmbBYTE *p, dmbINT16 i);
 void dmbInt32ToByte(dmbBYTE *p, dmbINT32 i);
 void dmbInt64ToByte(dmbBYTE *p, dmbINT64 i);
 
+dmbCode dmbGetAppPathByPid(pid_t pid, dmbCHAR *pcBuf, dmbUINT uSize);
+
 #endif // DMBSYSUTIL_H

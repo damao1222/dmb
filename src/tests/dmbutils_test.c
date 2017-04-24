@@ -15,38 +15,15 @@
     limitations under the License.
 */
 
-#include "dmbdefines.h"
+#include "dmbutils_test.h"
+
 #include "utils/dmbsysutil.h"
-#include "base/dmbsettings.h"
-#include <unistd.h>
 #include "utils/dmblog.h"
+#include <unistd.h>
 
-#include "tests/dmbbinlist_test.h"
-#include "tests/dmbstring_test.h"
-#include "tests/dmbdllist_test.h"
-#include "tests/dmbutils_test.h"
-
-int main(int argc, char** argv)
+void dmbutils_test()
 {
-    DMB_UNUSED(argc);
-    DMB_UNUSED(argv);
-
-    dmbSystemInit();
-
-    dmbLoadSettings(NULL);
-
-//    dmbbinlist_test();
-//    dmbbinlist_merge_test();
-//    dmbstring_test();
-    dmbdllist_test();
-    dmbutils_test();
-
-    sync();
-
-    dmbLogSystemInfo();
-
-    return DMB_OK;
+    dmbCHAR buf[256] = {0};
+    dmbGetAppPathByPid(getpid(), buf, 256);
+    DMB_LOGD("path is %s\n", buf);
 }
-
-inline void dmb_noop()
-{}

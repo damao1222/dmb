@@ -15,38 +15,9 @@
     limitations under the License.
 */
 
-#include "dmbdefines.h"
-#include "utils/dmbsysutil.h"
-#include "base/dmbsettings.h"
-#include <unistd.h>
-#include "utils/dmblog.h"
+#ifndef DMBUTILS_TEST_H
+#define DMBUTILS_TEST_H
 
-#include "tests/dmbbinlist_test.h"
-#include "tests/dmbstring_test.h"
-#include "tests/dmbdllist_test.h"
-#include "tests/dmbutils_test.h"
+void dmbutils_test();
 
-int main(int argc, char** argv)
-{
-    DMB_UNUSED(argc);
-    DMB_UNUSED(argv);
-
-    dmbSystemInit();
-
-    dmbLoadSettings(NULL);
-
-//    dmbbinlist_test();
-//    dmbbinlist_merge_test();
-//    dmbstring_test();
-    dmbdllist_test();
-    dmbutils_test();
-
-    sync();
-
-    dmbLogSystemInfo();
-
-    return DMB_OK;
-}
-
-inline void dmb_noop()
-{}
+#endif // DMBUTILS_TEST_H
