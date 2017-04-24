@@ -88,12 +88,22 @@ typedef dmbINT16 dmbCode;
 #define DMB_ERRCODE_OK DMB_OK
 
 //########11-50网络错误码#######
-#define DMB_ERRCODE_NETWORK_ERROR 501
-#define DMB_ERRCODE_NETWORK_AGAIN 502
+#define DMB_ERRCODE_NETWORK_ERROR 11
+//非阻塞模式，accept没有收到连接请求，需要重试
+#define DMB_ERRCODE_NETWORK_AGAIN 12
+//连接关闭时错误
+#define DMB_ERRCODE_NERWORK_CLOSE_FAILED 13
 
 //########501-600系统操作错误码####
 //内存分配失败
 #define DMB_ERRCODE_ALLOC_FAILED 501
+//创建线程失败
+#define DMB_ERRCODE_THREAD_ERROR 502
+//打开文件失败
+#define DMB_ERRCODE_FILE_OPEN_FAIL 521
+//文件读取失败
+#define DMB_ERRCODE_FILE_READ_ERROR 522
+
 //########601-700程序逻辑错误码####
 #define DMB_ERRCODE_NULL_POINTER 601
 //传入参数值错误

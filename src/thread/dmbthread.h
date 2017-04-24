@@ -15,20 +15,23 @@
     limitations under the License.
 */
 
-#include "dmbdictmetas.h"
+#ifndef DMBTHREAD_H
+#define DMBTHREAD_H
 
-struct dmbDictMeta dmbDictMetaStrObj= {
-    dmbStringObjHashFunc,
-    dmbStringObjKeyCompare,
-    dmbStringObjDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+#include "dmbdefines.h"
+#include <pthread.h>
 
-struct dmbDictMeta dmbDictMetaStr = {
-    dmbStringHashFunc,
-    dmbStringKeyCompare,
-    dmbStringDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+typedef dmbBOOL (*dmbCheckFunc)();
+typedef void * (*dmbThreadFunc) (dmbCheckFunc);
+
+typedef struct dmbThread{
+    pthread_t id;
+    dmbThreadFunc func;
+    dmbCheckFunc checkFunc;
+} dmbThread;
+
+void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check);
+dmbCode dmbThreadStart(dmbThread *pThread);
+dmbCode dmbThreadJoin(dmbThread *pThread);
+
+#endif // DMBTHREAD_H

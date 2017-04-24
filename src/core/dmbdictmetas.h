@@ -18,35 +18,30 @@
 #ifndef DMBDICTMETAS_H
 #define DMBDICTMETAS_H
 
-#include "cbstring.h"
-#include "cbobject.h"
-#include "cbdict.h"
-#include "cballoc.h"
+#include "dmbstring.h"
+#include "base/dmbobject.h"
+#include "dmbdict.h"
+#include "dmballoc.h"
 
-static inline __attribute__((always_inline)) dmbINT CBCompareLong(dmbLONG l1, dmbLONG l2)
+static inline __attribute__((always_inline)) dmbINT dmbCompareLong(dmbLONG l1, dmbLONG l2)
 {
-    if (l1 > l2)
-        return 1;
-    else if (l1 == l2)
-        return 0;
-    else
-        return -1;
+    return l1 - l2;
 }
 
-static inline dmbINT CBStringDumpKeyCompare (const void *pKey1Data, dmbSIZE key1Len, const void *pKey2Data, dmbSIZE key2Len)
+static inline dmbINT dmbStringDumpKeyCompare (const void *pKey1Data, dmbSIZE key1Len, const void *pKey2Data, dmbSIZE key2Len)
 {
-//    dmbINT ret = CBCompareLong(key1Len, key2Len);
+//    dmbINT ret = dmbCompareLong(key1Len, key2Len);
 //    if (ret != 0)
 //        return ret;
 
 //    return dmbMemCmp(pKey1Data, pKey2Data, key1Len);
     dmbINT ret = dmbMemCmp(pKey1Data, pKey2Data, key1Len);
     if (ret == 0)
-        ret = CBCompareLong(key1Len, key2Len);
+        ret = dmbCompareLong(key1Len, key2Len);
     return ret;
 }
 
-static inline dmbUINT CBStringDumpHashFunc (const void *pKey, dmbSIZE len)
+static inline dmbUINT dmbStringDumpHashFunc (const void *pKey, dmbSIZE len)
 {
     dmbUINT hash = 5381;
     dmbSIZE i;
@@ -59,45 +54,45 @@ static inline dmbUINT CBStringDumpHashFunc (const void *pKey, dmbSIZE len)
     return hash;
 }
 
-static inline void CBStringDumpKey (const void *pKey, void **pKeyData, dmbSIZE *pKeyLen)
+static inline void dmbStringDumpKey (const void *pKey, void **pKeyData, dmbSIZE *pKeyLen)
 {
-    CBStringGetData((CBString*)pKey, (dmbCHAR **)pKeyData, (dmbLONG*)pKeyLen);
+    dmbStringGetData((const dmbString*)pKey, (const dmbCHAR **)pKeyData, (dmbUINT*)pKeyLen);
 }
 
-static inline dmbINT CBStringKeyCompare (const void *pKey1, const void *pKey2)
+static inline dmbINT dmbStringKeyCompare (const void *pKey1, const void *pKey2)
 {
     dmbCHAR *v1, *v2;
-    dmbLONG n1, n2;
-    CBStringGetData((CBString*)pKey1, &v1, &n1);
-    CBStringGetData((CBString*)pKey2, &v2, &n2);
+    dmbUINT n1, n2;
+    dmbStringGetData((const dmbString*)pKey1, (const dmbCHAR**)&v1, &n1);
+    dmbStringGetData((const dmbString*)pKey2, (const dmbCHAR**)&v2, &n2);
 
-    return CBStringDumpKeyCompare(v1, n1, v2, n2);
+    return dmbStringDumpKeyCompare(v1, n1, v2, n2);
 }
 
-static inline dmbUINT CBStringHashFunc (const void *pKey)
+static inline dmbUINT dmbStringHashFunc (const void *pKey)
 {
     dmbSIZE len;
     void *key;
 
-    CBStringDumpKey(pKey, &key, &len);
-    return CBStringDumpHashFunc(key, len);
+    dmbStringDumpKey(pKey, &key, &len);
+    return dmbStringDumpHashFunc(key, len);
 }
 
-static inline dmbUINT CBStringObjHashFunc (const void *pKey)
+static inline dmbUINT dmbStringObjHashFunc (const void *pKey)
 {
-    return CBStringHashFunc((void*)((CBObject*)pKey)->ptr);
+    return dmbStringHashFunc((void*)((dmbObject*)pKey)->ptr);
 }
 
-static inline dmbINT CBStringObjKeyCompare (const void *pKey1, const void *pKey2)
+static inline dmbINT dmbStringObjKeyCompare (const void *pKey1, const void *pKey2)
 {
-    return CBStringKeyCompare((void*)((CBObject*)pKey1)->ptr, (void*)((CBObject*)pKey2)->ptr);
+    return dmbStringKeyCompare((void*)((dmbObject*)pKey1)->ptr, (void*)((dmbObject*)pKey2)->ptr);
 }
 
-static inline void CBStringObjDumpKey (const void *pKey, void **pKeyData, dmbSIZE *pKeyLen)
+static inline void dmbStringObjDumpKey (const void *pKey, void **pKeyData, dmbSIZE *pKeyLen)
 {
-    CBStringGetData((CBString*)((CBObject*)pKey)->ptr, (dmbCHAR **)pKeyData, (dmbLONG*)pKeyLen);
+    dmbStringGetData((const dmbString*)((dmbObject*)pKey)->ptr, (const dmbCHAR **)pKeyData, (dmbUINT*)pKeyLen);
 }
 
-extern struct CBDictMeta CBDictMetaStrObj;
-extern struct CBDictMeta CBDictMetaStr;
+extern struct dmbDictMeta dmbDictMetaStrObj;
+extern struct dmbDictMeta dmbDictMetaStr;
 #endif // DMBDICTMETAS_H

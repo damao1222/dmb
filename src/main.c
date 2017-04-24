@@ -26,6 +26,9 @@
 
 int main(int argc, char** argv)
 {
+    DMB_UNUSED(argc);
+    DMB_UNUSED(argv);
+
     dmbSystemInit();
 
 //    dmbbinlist_test();

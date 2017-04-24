@@ -19,6 +19,9 @@
 #define DMBSTRING_H
 
 #include "dmbdefines.h"
+#include <string.h>
+
+#define dmb_strlen(s) strlen(s)
 
 typedef struct {
     dmbUINT len;

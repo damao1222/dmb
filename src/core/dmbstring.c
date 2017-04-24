@@ -18,7 +18,6 @@
 #include "dmbstring.h"
 #include "dmballoc.h"
 #include <ctype.h>
-#include <string.h>
 #include <limits.h>
 #include <errno.h>
 #include <stdio.h>
@@ -32,8 +31,6 @@
 #else
 #define dmb_strstr(h,n)	strstr((h),(n))
 #endif
-
-#define dmb_strlen(s) strlen(s)
 
 static dmbCode insert(dmbString *pDestStr, const dmbCHAR *pStr, dmbUINT uPos, dmbUINT uLen) ;
 static dmbINT indexOfFrom(const dmbCHAR *pSrcStr, dmbUINT uSrcLen, const dmbCHAR *pStr, dmbUINT uLen, dmbUINT uFrom)

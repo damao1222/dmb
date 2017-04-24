@@ -15,20 +15,10 @@
     limitations under the License.
 */
 
-#include "dmbdictmetas.h"
 
-struct dmbDictMeta dmbDictMetaStrObj= {
-    dmbStringObjHashFunc,
-    dmbStringObjKeyCompare,
-    dmbStringObjDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+#ifndef DMBSERVER_H
+#define DMBSERVER_H
 
-struct dmbDictMeta dmbDictMetaStr = {
-    dmbStringHashFunc,
-    dmbStringKeyCompare,
-    dmbStringDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+#include "dmbdefines.h"
+
+#endif // DMBSERVER_H

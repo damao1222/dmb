@@ -121,16 +121,17 @@ static dmbCode NetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbC
 
 dmbCode dmbNetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbConnect *pConn)
 {
-    NetworkAddEvent(pCtx, iFd, iMask, pConn, TRUE);
+    return NetworkAddEvent(pCtx, iFd, iMask, pConn, TRUE);
 }
 
 dmbCode dmbNetworkChangeEvent(dmbNetworkContext *pCtx, dmbINT iFd, dmbINT iMask, dmbConnect *pConn)
 {
-    NetworkAddEvent(pCtx, iFd, iMask, pConn, FALSE);
+    return NetworkAddEvent(pCtx, iFd, iMask, pConn, FALSE);
 }
 
 dmbCode dmbNetworkDelEvent(dmbNetworkContext *pCtx, int iFd, int iMask)
 {
+    DMB_UNUSED(iMask);
     if (epoll_ctl(pCtx->netData->epfd, EPOLL_CTL_DEL, iFd, NULL) == -1)
     {
         return DMB_ERRCODE_NETWORK_ERROR;
@@ -152,8 +153,10 @@ dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeo
 
 static dmbCode CloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
-    dmbSafeClose(pConn->cliFd);
+    dmbINT ret = dmbSafeClose(pConn->cliFd);
     dmbListPushBack(&pCtx->idleConnList, &pConn->node);
+
+    return ret == 0 ? DMB_ERRCODE_OK : DMB_ERRCODE_NERWORK_CLOSE_FAILED;
 }
 
 static void read_test(dmbConnect *pConn)
@@ -204,6 +207,8 @@ dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSocket listener)
         if (pCtx->netData->events[i].events & EPOLLOUT)
             write_test(pConn);
     }
+
+    return code;
 }
 
 dmbCode dmbNetworkInitBuffer(dmbNetworkContext *pCtx, dmbUINT readBufSize, dmbUINT writeBufSize)
@@ -309,11 +314,13 @@ dmbCode dmbNetworkKeepAlive(int fd, int interval)
 
 #ifdef __linux__
     val = interval;
+    //对一个连接进行有效性探测之前运行的最大非活跃时间间隔，空闲时每隔val秒发送一次心跳包，系统默认值为14400（即 2 个小时）
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val)) < 0)
     {
         return DMB_ERRCODE_NETWORK_ERROR;
     }
 
+    //两个探测的时间间隔，单位秒，系统默认值为150即75秒
     val = interval/3;
     if (val == 0)
         val = 1;
@@ -323,6 +330,7 @@ dmbCode dmbNetworkKeepAlive(int fd, int interval)
     }
 
     val = 3;
+    //关闭一个非活跃连接之前进行探测的最大次数，系统默认为8次
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) < 0)
     {
         return DMB_ERRCODE_NETWORK_ERROR;
@@ -367,15 +375,17 @@ dmbCode dmbNetworkListen(dmbSocket *pFd, const char *addr, int port, int backlog
     if (listenfd == -1)
         return DMB_ERRCODE_NETWORK_ERROR;
 
+    //非阻塞
     err = dmbNetworkNonblocking(listenfd, TRUE);
     if (err != DMB_ERRCODE_OK)
         return DMB_ERRCODE_NETWORK_ERROR;
 
+    //地址重用
     err = dmbNetworkReuse(listenfd);
     if (err != DMB_ERRCODE_OK)
         return DMB_ERRCODE_NETWORK_ERROR;
 
-    //SO_LINGER
+    //SO_LINGER 若设置了SO_LINGER并确定了非零的超时间隔，则closesocket()调用阻塞进程，直到所剩数据发送完毕或超时
     err = dmbNetworkLinger(listenfd, TRUE, LINGER_TIMEOUT);
     if (err != DMB_ERRCODE_OK)
         return DMB_ERRCODE_NETWORK_ERROR;
@@ -395,6 +405,7 @@ dmbCode dmbNetworkListen(dmbSocket *pFd, const char *addr, int port, int backlog
         return DMB_ERRCODE_NETWORK_ERROR;
 
     *pFd = listenfd;
+
     return err;
 }
 

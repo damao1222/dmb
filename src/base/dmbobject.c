@@ -116,7 +116,7 @@ void dmbDestroyIntObject(dmbObject *o)
 void dmbDestroyStringObject(dmbObject *o)
 {
     if (o->encode == DMB_OBJ_ENCODE_STRING)
-        dmbStringDestroy(o->ptr);
+        dmbStringDestroy((dmbString*)o->ptr);
     dmbFree(o);
 }
 

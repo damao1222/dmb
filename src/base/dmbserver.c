@@ -15,20 +15,36 @@
     limitations under the License.
 */
 
-#include "dmbdictmetas.h"
 
-struct dmbDictMeta dmbDictMetaStrObj= {
-    dmbStringObjHashFunc,
-    dmbStringObjKeyCompare,
-    dmbStringObjDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+#include "dmbserver.h"
+#include <sys/time.h>
+#include <sys/resource.h>
 
-struct dmbDictMeta dmbDictMetaStr = {
-    dmbStringHashFunc,
-    dmbStringKeyCompare,
-    dmbStringDumpKey,
-    dmbStringDumpHashFunc,
-    dmbStringDumpKeyCompare
-};
+
+
+dmbCode dmbSetrLimit(rlim_t nofile)
+{
+    dmbCode code = DMB_ERRCODE_OK;
+    struct rlimit rl;
+    do
+    {
+        rl.rlim_cur = RLIM_INFINITY;
+        rl.rlim_max = RLIM_INFINITY;
+        if (setrlimit(RLIMIT_CORE, &rl) != 0)
+        {
+            code = DMB_ERROR;
+            break;
+        }
+
+        rl.rlim_cur = nofile;
+        rl.rlim_max = nofile;
+        if (setrlimit(RLIMIT_NOFILE, &rl) != 0)
+        {
+            code = DMB_ERROR;
+            break;
+        }
+    }
+    while (FALSE);
+
+    return code;
+}
