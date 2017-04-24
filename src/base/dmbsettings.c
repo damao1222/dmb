@@ -89,6 +89,10 @@ dmbLONG parseIntString(const dmbCHAR* pcStr)
     for( i = strLen-1; i >= 0 ; i--)
     {
         ch = pcStr[i];
+        //found number
+        if (ch >= '0' && ch <= '9')
+            break;
+
         if(ch == 'k' || ch == 'K')
         {
             unit = UNIT_KB;
