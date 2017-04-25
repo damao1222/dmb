@@ -21,17 +21,26 @@
 #include "dmbdefines.h"
 #include <pthread.h>
 
+typedef void* dmbThreadData;
 typedef dmbBOOL (*dmbCheckFunc)();
-typedef void * (*dmbThreadFunc) (dmbCheckFunc);
+typedef void * (*dmbThreadFunc) (dmbThreadData);
 
 typedef struct dmbThread{
     pthread_t id;
     dmbThreadFunc func;
     dmbCheckFunc checkFunc;
+    void *param;
 } dmbThread;
 
-void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check);
+void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check, void *pParam);
 dmbCode dmbThreadStart(dmbThread *pThread);
 dmbCode dmbThreadJoin(dmbThread *pThread);
+dmbBOOL dmbThreadRunning(dmbThreadData data);
+void* dmbThreadGetParam(dmbThreadData data);
+
+#define dmbThreadRunning(DATA) \
+    (((dmbThread*)(DATA))->checkFunc ? ((dmbThread*)(DATA))->checkFunc() : TRUE)
+
+#define dmbThreadGetParam(DATA) (((dmbThread*)(data))->param)
 
 #endif // DMBTHREAD_H

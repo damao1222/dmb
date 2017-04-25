@@ -29,7 +29,7 @@
 
 static dmbConnect *GetIdleConn(dmbNetworkContext *pCtx);
 
-dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uFdSize, dmbUINT uEventNum)
+dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uEventNum)
 {
     dmbCode code = DMB_ERRCODE_OK;
     dmbUINT i;
@@ -54,7 +54,7 @@ dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uF
         }
 
         do {
-            pCtx->netData->epfd = epoll_create(uFdSize);
+            pCtx->netData->epfd = epoll_create1(0);
             if (pCtx->netData->epfd == -1)
             {
                 code = DMB_ERRCODE_NETWORK_ERROR;
@@ -89,12 +89,13 @@ dmbCode dmbNetworkPurge(dmbNetworkContext *pCtx)
         {
             if (pCtx->netData->epfd != -1)
             {
-                close(pCtx->netData->epfd);
+                dmbSafeClose(pCtx->netData->epfd);
+                pCtx->netData->epfd = -1;
             }
 
-            dmbFree(pCtx->netData);
-            dmbFree(pCtx->connects);
+            DMB_SAFE_FREE(pCtx->netData);
         }
+        DMB_SAFE_FREE(pCtx->connects);
     }
 
     return DMB_ERRCODE_NULL_POINTER;
@@ -110,8 +111,8 @@ static dmbCode NetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbC
         pConn->cliFd = iFd;
     epEvent.data.ptr = pConn;
 
-    if (iMask & CB_NW_READ) epEvent.events |= EPOLLIN;
-    if (iMask & CB_NW_WRITE) epEvent.events |= EPOLLOUT;
+    if (iMask & DMB_NW_READ) epEvent.events |= EPOLLIN;
+    if (iMask & DMB_NW_WRITE) epEvent.events |= EPOLLOUT;
 
     if (epoll_ctl(pCtx->netData->epfd, opt, iFd, &epEvent) == -1)
         return DMB_ERRCODE_NETWORK_ERROR;
@@ -119,7 +120,7 @@ static dmbCode NetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbC
     return DMB_ERRCODE_OK;
 }
 
-dmbCode dmbNetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbConnect *pConn)
+dmbCode dmbNetworkAddEvent(dmbNetworkContext *pCtx, dmbSOCKET iFd, int iMask, dmbConnect *pConn)
 {
     return NetworkAddEvent(pCtx, iFd, iMask, pConn, TRUE);
 }
@@ -151,7 +152,7 @@ dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeo
     return DMB_ERRCODE_OK;
 }
 
-static dmbCode CloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn)
+dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
     dmbINT ret = dmbSafeClose(pConn->cliFd);
     dmbListPushBack(&pCtx->idleConnList, &pConn->node);
@@ -170,10 +171,10 @@ static void write_test(dmbConnect *pConn)
     dmbSafeWrite(pConn->cliFd, pConn->writeBuf, 10);
 }
 
-dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSocket listener)
+dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSOCKET listener)
 {
     dmbINT num, i;
-    dmbSocket client;
+    dmbSOCKET client;
     dmbConnect *pConn = NULL;
     dmbCode code = dmbNetworkPoll(pCtx, &num, 10000);
     if (code != DMB_ERRCODE_OK)
@@ -198,7 +199,7 @@ dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSocket listener)
 
         if (pCtx->netData->events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
         {
-            CloseConnect(pCtx, pConn);
+            dmbNetworkCloseConnect(pCtx, pConn);
             continue;
         }
 
@@ -235,11 +236,12 @@ dmbCode dmbNetworkPurgeBuffer(dmbNetworkContext *pCtx)
     return DMB_ERRCODE_OK;
 }
 
-dmbCode dmbNetworkAccept(dmbSocket listener, dmbSocket *pSocket)
+dmbCode dmbNetworkAccept(dmbSOCKET listener, dmbSOCKET *pSocket)
 {
     int fd;
     int err;
     struct sockaddr_in sa;
+    dmbMemSet((void *) &sa, 0, sizeof(struct sockaddr_in));
     socklen_t salen = sizeof(sa);
     while(1)
     {
@@ -364,9 +366,9 @@ dmbCode dmbNetworkTcpKeepAlive(int fd)
     return DMB_ERRCODE_OK;
 }
 
-dmbCode dmbNetworkListen(dmbSocket *pFd, const char *addr, int port, int backlog)
+dmbCode dmbNetworkListen(dmbSOCKET *pFd, const char *addr, int port, int backlog)
 {
-    dmbSocket listenfd = -1;
+    dmbSOCKET listenfd = -1;
     dmbCode err = DMB_ERRCODE_OK;
     struct sockaddr_in serveraddr;
 
@@ -409,17 +411,26 @@ dmbCode dmbNetworkListen(dmbSocket *pFd, const char *addr, int port, int backlog
     return err;
 }
 
-dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, int fd)
+dmbCode dmbNetworkInitNewConnect(dmbSOCKET client)
 {
-    dmbCode code = dmbNetworkSetTcpNoDelay(fd, TRUE);
+    dmbCode code = dmbNetworkSetTcpNoDelay(client, TRUE);
     if (code != DMB_ERRCODE_OK)
         return code;
 
-    code = dmbNetworkKeepAlive(fd, 5);
+    code = dmbNetworkKeepAlive(client, 5);
     if (code != DMB_ERRCODE_OK)
         return code;
 
-    code = dmbNetworkNonblocking(fd, TRUE);
+    code = dmbNetworkNonblocking(client, TRUE);
+    if (code != DMB_ERRCODE_OK)
+        return code;
+
+    return code;
+}
+
+dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd)
+{
+    dmbCode code = dmbNetworkInitNewConnect(fd);
     if (code != DMB_ERRCODE_OK)
         return code;
 
@@ -427,7 +438,7 @@ dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, int fd)
     if (pConn == NULL)
         return DMB_ERRCODE_NETWORK_ERROR;
 
-    return dmbNetworkAddEvent(pCtx, fd, CB_NW_READ | CB_NW_WRITE, pConn);
+    return dmbNetworkAddEvent(pCtx, fd, DMB_NW_READ | DMB_NW_WRITE, pConn);
 }
 
 static dmbConnect *GetIdleConn(dmbNetworkContext *pCtx)

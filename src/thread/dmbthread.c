@@ -19,11 +19,12 @@
 
 void* static_run(void *data);
 
-void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check)
+void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check, void *pParam)
 {
     pThread->func = func;
     pThread->checkFunc = check;
     pThread->id = 0;
+    pThread->param = pParam;
 }
 
 dmbCode dmbThreadStart(dmbThread *pThread)
@@ -35,6 +36,9 @@ dmbCode dmbThreadStart(dmbThread *pThread)
 
 dmbCode dmbThreadJoin(dmbThread *pThread)
 {
+    if (pThread->id == 0)
+        return DMB_ERRCODE_OK;
+
     return pthread_join(pThread->id, NULL) == 0 ? DMB_ERRCODE_OK : DMB_ERRCODE_THREAD_ERROR;
 }
 
@@ -42,9 +46,10 @@ void* static_run(void *data)
 {
     dmbThread* pThread = (dmbThread*)(data);
 
-    void * p = pThread->func(pThread->checkFunc);
+    void * p = pThread->func(pThread);
 
     pthread_exit(p);
 
     return p;
 }
+

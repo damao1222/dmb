@@ -19,11 +19,28 @@
 #define DMBSERVERCORE_H
 
 #include "dmbdefines.h"
+#include "dmbnetwork.h"
+#include "thread/dmbthread.h"
 
-dmbCode dmbInitAcceptThread();
-dmbCode dmbQuitAcceptThread();
+typedef struct dmbWorkThreadData {
+    dmbNetworkContext ctx;
+    dmbThread thread;
+    dmbPIPE  pipeArr[2];//0-read,1-write
+} dmbWorkThreadData;
 
-dmbCode dmbInitWorkThreads();
-dmbCode dmbQuitWorkThreads();
+typedef struct dmbServerContext {
+    dmbWorkThreadData *workThreadArr;
+    dmbSOCKET acceptSocket;
+    dmbThread acceptThread;
+} dmbServerContext;
+
+dmbCode dmbInitServerContext(dmbServerContext *pCtx);
+void dmbPurgeServerContext(dmbServerContext *pCtx);
+
+dmbCode dmbInitAcceptThread(dmbServerContext *pCtx);
+dmbCode dmbQuitAcceptThread(dmbServerContext *pCtx);
+
+dmbCode dmbInitWorkThreads(dmbServerContext *pCtx);
+dmbCode dmbQuitWorkThreads(dmbServerContext *pCtx);
 
 #endif // DMBSERVERCORE_H

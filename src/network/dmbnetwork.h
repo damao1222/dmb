@@ -22,16 +22,19 @@
 #include <sys/epoll.h>
 #include "core/dmblist.h"
 
-#define CB_NW_NONE  0 //none, accept
-#define CB_NW_READ  1 //read
-#define CB_NW_WRITE 2 //write
+#define DMB_NW_NONE  0 //none, accept
+#define DMB_NW_READ  1 //read
+#define DMB_NW_WRITE 2 //write
 
-typedef int dmbSocket;
+typedef int dmbSOCKET;
+typedef int dmbPIPE;
+
+typedef struct epoll_event dmbNetworkEvent;
 
 typedef struct dmbEpollData {
     dmbINT epfd;
     dmbUINT eventSize;
-    struct epoll_event events[];
+    dmbNetworkEvent events[];
 } dmbEpollData;
 
 
@@ -52,11 +55,11 @@ typedef struct dmbNetworkContext {
 } dmbNetworkContext;
 
 
-dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uFdSize, dmbUINT uEventNum);
+dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uEventNum);
 
 dmbCode dmbNetworkPurge(dmbNetworkContext *pCtx);
 
-dmbCode dmbNetworkAddEvent(dmbNetworkContext *pCtx, dmbINT iFd, dmbINT iMask, dmbConnect *pConn);
+dmbCode dmbNetworkAddEvent(dmbNetworkContext *pCtx, dmbSOCKET iFd, dmbINT iMask, dmbConnect *pConn);
 
 dmbCode dmbNetworkChangeEvent(dmbNetworkContext *pCtx, dmbINT iFd, dmbINT iMask, dmbConnect *pConn);
 
@@ -64,17 +67,30 @@ dmbCode dmbNetworkDelEvent(dmbNetworkContext *pCtx, dmbINT iFd, dmbINT iMask);
 
 dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeout);
 
-dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSocket listener);
+dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSOCKET listener);
 
 dmbCode dmbNetworkInitBuffer(dmbNetworkContext *pCtx, dmbUINT readBufSize, dmbUINT writeBufSize);
 
 dmbCode dmbNetworkPurgeBuffer(dmbNetworkContext *pCtx);
 
-dmbCode dmbNetworkAccept(dmbSocket listener, dmbSocket *pSocket);
+dmbCode dmbNetworkAccept(dmbSOCKET listener, dmbSOCKET *pSocket);
 
-dmbCode dmbNetworkListen(dmbSocket *pFd, const char *addr, int port, int backlog);
+dmbCode dmbNetworkListen(dmbSOCKET *pFd, const char *addr, int port, int backlog);
 
-dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSocket fd);
+dmbCode dmbNetworkInitNewConnect(dmbSOCKET client);
 
+dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd);
+
+dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn);
+
+#define dmbNetworkGetConnect(EVENT_PTR) ((dmbConnect*)(EVENT_PTR)->data.ptr)
+#define dmbNetworkBadConnect(EVENT_PTR) ((EVENT_PTR)->events & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
+#define dmbNetworkCanRead(EVENT_PTR) ((EVENT_PTR)->events & EPOLLIN)
+#define dmbNetworkCanWrite(EVENT_PTR) ((EVENT_PTR)->events & EPOLLOUT)
+
+#define dmbNetworkEventForeach(CTX, EVENT_PTR, INDEX, NUM) \
+    for (INDEX=0, EVENT_PTR=&CTX->netData->events[INDEX]; \
+            INDEX<NUM; \
+        ({EVENT_PTR = &CTX->netData->events[INDEX]; INDEX++;}))
 
 #endif // DMBNETWORK_H

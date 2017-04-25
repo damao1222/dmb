@@ -26,6 +26,7 @@ typedef struct dmbSettings{
     dmbINT listen_backlog;
     dmbINT open_files;
     dmbINT thread_size;
+    dmbUINT connect_size_per_thread;
     dmbUINT net_read_bufsize;
     dmbUINT net_write_bufsize;
 } dmbSettings;

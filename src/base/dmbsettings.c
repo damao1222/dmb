@@ -64,6 +64,7 @@ void dmbResetDefaultSettings()
     g_settings.listen_backlog = 3000;
     g_settings.net_read_bufsize = 4194304; //4MB
     g_settings.net_write_bufsize = 4194304; //4MB
+    g_settings.connect_size_per_thread = 3000;
     g_settings.thread_size = 10;
     g_settings.open_files = 1024;
 }
@@ -148,6 +149,7 @@ dmbCode dmbLoadSettings(const dmbCHAR *confPath)
     PARSE_INT(property, g_settings.listen_backlog, "listen_backlog");
     PARSE_INT(property, g_settings.open_files, "open_files");
     PARSE_INT(property, g_settings.thread_size, "thread_size");
+    PARSE_INTSTRING(property, g_settings.connect_size_per_thread, "connect_size_per_thread");
     PARSE_INTSTRING(property, g_settings.net_read_bufsize, "net_read_bufsize");
     PARSE_INTSTRING(property, g_settings.net_write_bufsize, "net_write_bufsize");
 
