@@ -212,8 +212,8 @@ void dmbListRemove(dmbNode *pNode)
 {
     pNode->pNext->pPrev = pNode->pPrev;
     pNode->pPrev->pNext = pNode->pNext;
-    pNode->pNext = NULL;
-    pNode->pPrev = NULL;
+//    pNode->pNext = NULL;
+//    pNode->pPrev = NULL;
 }
 
 /**dmbListRemoveRange

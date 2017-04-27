@@ -25,6 +25,19 @@
 #include "tests/dmbstring_test.h"
 #include "tests/dmbdllist_test.h"
 #include "tests/dmbutils_test.h"
+#include "tests/dmbnetwork_test.h"
+
+static volatile dmbBOOL g_app_run = TRUE;
+
+dmbBOOL dmbIsAppQuit()
+{
+    return g_app_run;
+}
+
+void dmbStopApp()
+{
+    g_app_run = FALSE;
+}
 
 int main(int argc, char** argv)
 {
@@ -38,8 +51,9 @@ int main(int argc, char** argv)
 //    dmbbinlist_test();
 //    dmbbinlist_merge_test();
 //    dmbstring_test();
-    dmbdllist_test();
-    dmbutils_test();
+//    dmbdllist_test();
+//    dmbutils_test();
+    dmbnetwork_test();
 
     sync();
 

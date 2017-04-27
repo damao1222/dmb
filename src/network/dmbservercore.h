@@ -22,10 +22,16 @@
 #include "dmbnetwork.h"
 #include "thread/dmbthread.h"
 
+#define DMB_CLISO_ARR_SIZE 131072
+
 typedef struct dmbWorkThreadData {
     dmbNetworkContext ctx;
+    dmbNetworkListener listener;
     dmbThread thread;
     dmbPIPE  pipeArr[2];//0-read,1-write
+    dmbBYTE cliSoDataArr[DMB_CLISO_ARR_SIZE]; //accept socket data
+    dmbINT cliSoDataIndex;
+    volatile dmbINT64 connCount;
 } dmbWorkThreadData;
 
 typedef struct dmbServerContext {
@@ -33,6 +39,11 @@ typedef struct dmbServerContext {
     dmbSOCKET acceptSocket;
     dmbThread acceptThread;
 } dmbServerContext;
+
+#define DMB_CLISO_ARR_LEN(DATA) (DMB_CLISO_ARR_SIZE - (DATA)->cliSoDataIndex)
+
+extern void dmbStopApp();
+extern dmbBOOL dmbIsAppQuit();
 
 dmbCode dmbInitServerContext(dmbServerContext *pCtx);
 void dmbPurgeServerContext(dmbServerContext *pCtx);

@@ -59,6 +59,8 @@ typedef char dmbCHAR;
 typedef dmbUINT8 dmbBYTE;
 typedef volatile dmbLONG dmbRef;
 
+#define DMB_INVALID_FD -1
+
 #ifndef NULL
 #define NULL 0
 #endif

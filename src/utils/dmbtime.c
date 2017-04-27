@@ -50,6 +50,11 @@ dmbLONG dmbLocalCurrentMillis()
     return (1000L *  time.tv_sec + time.tv_usec / 1000L);
 }
 
+inline dmbLONG dmbLocalCurrentSec()
+{
+    return time(NULL);
+}
+
 dmbLONG dmbSystemCurrentMillis()
 {
     return g_virtual_system_time == 0 ? dmbLocalCurrentMillis() : g_virtual_system_time;

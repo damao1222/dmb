@@ -21,7 +21,7 @@
 #include "dmbdefines.h"
 
 typedef struct dmbEndTime {
-#ifdef CB_NO_THREAD
+#ifdef DMB_NO_THREAD
     dmbLONG totle;
     dmbLONG begin;
 #else
@@ -58,6 +58,13 @@ dmbBOOL dmbGetSpecialFormatTime(const char *pcFormat, char *pcBuf, dmbUINT uSize
 dmbLONG dmbLocalCurrentMillis();
 
 /**
+ * @brief 获得本地系统秒数
+ *
+ * @return dmbLONG 秒数
+ */
+dmbLONG dmbLocalCurrentSec();
+
+/**
  * @brief 获得系统毫秒数
  *
  * @return dmbLONG 毫秒数
@@ -80,7 +87,7 @@ dmbLONG dmbGetAppClockMillis();
  * @brief 初始化一个计时器
  *
  * @param pTime 计时器指针
- * @param uTotleTime 设置过期时间
+ * @param uTotleTime 设置过期时间，单位毫秒
  */
 void dmbEndTimeInit(dmbEndTime *pTime, dmbLONG uTotleTime);
 
@@ -111,7 +118,7 @@ dmbBOOL dmbEndTimeIsInfinite(dmbEndTime *pTime);
  * @brief 获得计时器剩余过期时间
  *
  * @param pTime 计时器指针
- * @return dmbLONG 剩余时间
+ * @return dmbLONG 剩余时间，单位毫秒
  */
 dmbLONG dmbEndTimeLeftTime(dmbEndTime *pTime);
 
@@ -119,7 +126,7 @@ dmbLONG dmbEndTimeLeftTime(dmbEndTime *pTime);
  * @brief 获得计时器从初始化开始过去的时间
  *
  * @param pTime 计时器指针
- * @return dmbLONG 过去的时间
+ * @return dmbLONG 过去的时间，单位毫秒
  */
 dmbLONG dmbEndTimePastTime(dmbEndTime *pTime);
 

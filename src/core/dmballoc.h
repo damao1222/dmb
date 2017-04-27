@@ -117,6 +117,8 @@ size_t dmbAllocSize(void *p);
  */
 size_t dmbGetUsedMemSize();
 
+void dmbSetMaxMemSize(size_t size);
+
 #define DMB_SAFE_FREE(PTR) do { if (PTR != NULL) { dmbFree(PTR); PTR = NULL; } } while (0)
 
 #define DMB_CHECK_PTR(p) DMB_ASSERT(p)

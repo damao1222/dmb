@@ -19,32 +19,32 @@
 #include "base/dmbsettings.h"
 #include "core/dmballoc.h"
 #include "utils/dmbioutil.h"
+#include "thread/dmbatomic.h"
 #include <sys/socket.h>
 
 #define DEFAULT_SELECT_TIMEOUT 5 //second
 #define DEFAULT_SELECT_EPOLL_TIMEOUT 5000 //millisecond
 #define DEFAULT_EPOLL_EVENTNUM 10240
-#define INVALID_FD -1
 
 void * acceptThreadImpl (dmbThreadData data);
 void * workThreadImpl (dmbThreadData data);
 
-static volatile dmbBOOL g_app_run = TRUE;
-
-dmbBOOL IsAppQuit()
+static dmbCode OnConnect(void *p)
 {
-    return g_app_run;
+    DMB_UNUSED(p);
+    return DMB_ERRCODE_OK;
 }
 
-void dmbStopApp()
+static void OnClosed(void *p)
 {
-    g_app_run = FALSE;
+    dmbWorkThreadData *pData = (dmbWorkThreadData*)p;
+    dmbAtomicDecr(&pData->connCount);
 }
 
 dmbCode dmbInitServerContext(dmbServerContext *pCtx)
 {
     dmbCode code = DMB_ERRCODE_OK;
-    pCtx->acceptSocket = INVALID_FD;
+    pCtx->acceptSocket = DMB_INVALID_FD;
 
     pCtx->workThreadArr = (dmbWorkThreadData*) dmbMalloc(sizeof(dmbWorkThreadData) * g_settings.thread_size);
     dmbINT i;
@@ -56,8 +56,12 @@ dmbCode dmbInitServerContext(dmbServerContext *pCtx)
 
     for (i=0; i<g_settings.thread_size; ++i)
     {
-        pCtx->workThreadArr[i].pipeArr[0] = INVALID_FD;
-        pCtx->workThreadArr[i].pipeArr[1] = INVALID_FD;
+        pCtx->workThreadArr[i].pipeArr[0] = DMB_INVALID_FD;
+        pCtx->workThreadArr[i].pipeArr[1] = DMB_INVALID_FD;
+
+        dmbMemSet(pCtx->workThreadArr[i].cliSoDataArr, 0, DMB_CLISO_ARR_SIZE);
+        pCtx->workThreadArr[i].cliSoDataIndex = 0;
+        pCtx->workThreadArr[i].connCount = 0;
     }
 
     return code;
@@ -65,7 +69,7 @@ dmbCode dmbInitServerContext(dmbServerContext *pCtx)
 
 void dmbPurgeServerContext(dmbServerContext *pCtx)
 {
-    pCtx->acceptSocket = INVALID_FD;
+    pCtx->acceptSocket = DMB_INVALID_FD;
 
     DMB_SAFE_FREE(pCtx->workThreadArr);
 }
@@ -76,7 +80,7 @@ dmbCode dmbInitAcceptThread(dmbServerContext *pCtx)
     if (code != DMB_ERRCODE_OK)
         return code;
 
-    dmbThreadInit(&pCtx->acceptThread, acceptThreadImpl, IsAppQuit, pCtx);
+    dmbThreadInit(&pCtx->acceptThread, acceptThreadImpl, dmbIsAppQuit, pCtx);
     return dmbThreadStart(&pCtx->acceptThread);
 }
 
@@ -88,10 +92,10 @@ dmbCode dmbQuitAcceptThread(dmbServerContext *pCtx)
         code = dmbThreadJoin(&pCtx->acceptThread);
     }
 
-    if (pCtx->acceptSocket != INVALID_FD)
+    if (pCtx->acceptSocket != DMB_INVALID_FD)
     {
         code = dmbSafeClose(pCtx->acceptSocket);
-        pCtx->acceptSocket = INVALID_FD;
+        pCtx->acceptSocket = DMB_INVALID_FD;
     }
 
     return code;
@@ -103,11 +107,15 @@ dmbCode dmbInitWorkThreads(dmbServerContext *pCtx)
     dmbINT i;
     for (i=0; i<g_settings.thread_size; ++i)
     {
-        code = dmbNetworkInit(&pCtx->workThreadArr[i].ctx, g_settings.connect_size_per_thread, DEFAULT_EPOLL_EVENTNUM);
+        dmbNetworkListener *l = &pCtx->workThreadArr[i].listener;
+        l->onConnect = OnConnect;
+        l->onClosed = OnClosed;
+        l->data = &pCtx->workThreadArr[i];
+        code = dmbNetworkInit(&pCtx->workThreadArr[i].ctx, DEFAULT_EPOLL_EVENTNUM, l);
         if (code != DMB_ERRCODE_OK)
             return code;
 
-        code = dmbNetworkInitBuffer(&pCtx->workThreadArr[i].ctx, g_settings.net_read_bufsize, g_settings.net_write_bufsize);
+        code = dmbNetworkInitConnectPool(&pCtx->workThreadArr[i].ctx, g_settings.connect_size_per_thread, g_settings.net_read_bufsize, g_settings.net_write_bufsize);
         if (code != DMB_ERRCODE_OK)
             return code;
 
@@ -118,9 +126,11 @@ dmbCode dmbInitWorkThreads(dmbServerContext *pCtx)
         if (code != DMB_ERRCODE_OK)
             return code;
 
-        dmbThreadInit(&pCtx->workThreadArr[i].thread, workThreadImpl, IsAppQuit, &pCtx->workThreadArr[i].ctx);
+        dmbThreadInit(&pCtx->workThreadArr[i].thread, workThreadImpl, dmbIsAppQuit, &pCtx->workThreadArr[i]);
 
-        return dmbThreadStart(&pCtx->workThreadArr[i].thread);
+        code = dmbThreadStart(&pCtx->workThreadArr[i].thread);
+        if (code != DMB_ERRCODE_OK)
+            return code;
     }
     return code;
 }
@@ -132,33 +142,58 @@ dmbCode dmbQuitWorkThreads(dmbServerContext *pCtx)
     {
         for (i=0;i<g_settings.thread_size; ++i)
         {
-            dmbThreadJoin(&pCtx->workThreadArr->thread);
-            if (pCtx->workThreadArr[i].pipeArr[0] != INVALID_FD)
+            dmbThreadJoin(&pCtx->workThreadArr[i].thread);
+            if (pCtx->workThreadArr[i].pipeArr[0] != DMB_INVALID_FD)
             {
                 dmbSafeClose(pCtx->workThreadArr[i].pipeArr[0]);
-                pCtx->workThreadArr[i].pipeArr[0] = INVALID_FD;
+                pCtx->workThreadArr[i].pipeArr[0] = DMB_INVALID_FD;
             }
 
-            if (pCtx->workThreadArr[i].pipeArr[1] != INVALID_FD)
+            if (pCtx->workThreadArr[i].pipeArr[1] != DMB_INVALID_FD)
             {
                 dmbSafeClose(pCtx->workThreadArr[i].pipeArr[1]);
-                pCtx->workThreadArr[i].pipeArr[1] = INVALID_FD;
+                pCtx->workThreadArr[i].pipeArr[1] = DMB_INVALID_FD;
             }
 
-            dmbNetworkPurgeBuffer(&pCtx->workThreadArr[i].ctx);
+            dmbNetworkPurgeConnectPool(&pCtx->workThreadArr[i].ctx);
             dmbNetworkPurge(&pCtx->workThreadArr[i].ctx);
         }
     }
-    return DMB_ERROR;
+    return DMB_ERRCODE_OK;
+}
+
+dmbWorkThreadData* findIdleThread(dmbServerContext *pCtx, dmbINT *pCur)
+{
+    dmbINT i;
+    dmbWorkThreadData* pData = NULL;
+    dmbINT64 iCount64;
+
+    for (i=0; i<g_settings.thread_size; ++(*pCur), ++i)
+    {
+        *pCur %= g_settings.thread_size;
+        pData = &pCtx->workThreadArr[*pCur];
+        iCount64 = dmbAtomicIncr(&pData->connCount);
+        if (iCount64 > g_settings.connect_size_per_thread)
+        {
+            dmbAtomicDecr(&pData->connCount);
+            pData = NULL;
+            continue;
+        }
+
+        return pData;
+    }
+    return NULL;
 }
 
 void * acceptThreadImpl (dmbThreadData data)
 {
     fd_set fdacc;
-    int iRet;
+    int iRet, iCur = 0;
     dmbSOCKET client;
     struct timeval tiAcceptTimeOut = { DEFAULT_SELECT_TIMEOUT, 0 };
     dmbServerContext *pCtx = (dmbServerContext*)dmbThreadGetParam(data);
+    dmbWorkThreadData *pWorkData;
+
     while (dmbThreadRunning(data))
     {
         FD_ZERO(&fdacc);
@@ -177,6 +212,13 @@ void * acceptThreadImpl (dmbThreadData data)
             }
 
             //add to work thread
+            pWorkData = findIdleThread(pCtx, &iCur);
+            if (pWorkData == NULL)
+            {
+                dmbSafeClose(client);
+                continue;
+            }
+            iRet = dmbSafeWrite(pWorkData->pipeArr[1], (dmbBYTE*) &client, sizeof(dmbSOCKET));
         }
         //time out
         else if (iRet == 0)
@@ -192,12 +234,39 @@ void * acceptThreadImpl (dmbThreadData data)
     return NULL;
 }
 
+static dmbCode processNewConnect(dmbWorkThreadData *pData)
+{
+    dmbINT i, iCount, iRemain;
+    dmbINT iReadLen = dmbSafeRead(pData->pipeArr[0], pData->cliSoDataArr+pData->cliSoDataIndex, DMB_CLISO_ARR_LEN(pData));
+    DMB_ASSERT(iReadLen > 0);
+    pData->cliSoDataIndex += iReadLen;
+    iCount = pData->cliSoDataIndex / sizeof(dmbSOCKET);
+    iRemain = pData->cliSoDataIndex % sizeof(dmbSOCKET);
+    dmbSOCKET *pSocket = (dmbSOCKET*)pData->cliSoDataArr;
+    if (iCount > 0)
+    {
+        for (i = 0; i<iCount; pSocket++, i++)
+        {
+            if (dmbNetworkProcessNewConnect(&pData->ctx, *pSocket, g_settings.net_rw_timeout) == DMB_ERRCODE_OK)
+            {
+                //Dont care about this.
+            }
+        }
+
+        iCount *= sizeof(dmbSOCKET);
+        dmbMemMove(pData->cliSoDataArr, pData->cliSoDataArr+iCount, iRemain);
+        pData->cliSoDataIndex -= iCount;
+    }
+
+    return DMB_ERRCODE_OK;
+}
+
 void * workThreadImpl (dmbThreadData data)
 {
     dmbCode code = DMB_ERRCODE_OK;
-    dmbNetworkContext *pCtx = (dmbNetworkContext*)dmbThreadGetParam(data);
+    dmbWorkThreadData *pThreadData = (dmbWorkThreadData*)dmbThreadGetParam(data);
+    dmbNetworkContext *pCtx = &pThreadData->ctx;
     dmbINT iNum = 0, i;
-    dmbSOCKET client = INVALID_FD;
     dmbConnect *pConn;
     dmbNetworkEvent *pEvent;
 
@@ -213,7 +282,7 @@ void * workThreadImpl (dmbThreadData data)
 
             if (pConn == NULL)
             {
-                code = dmbNetworkProcessNewConnect(pCtx, client);
+                code = processNewConnect(pThreadData);
                 continue;
             }
 
@@ -233,6 +302,8 @@ void * workThreadImpl (dmbThreadData data)
 //                write_test(pConn);
             }
         }
+
+        dmbNetworkCloseTimeoutConnect(pCtx);
     }
 
     return NULL;

@@ -37,25 +37,34 @@ typedef struct dmbEpollData {
     dmbNetworkEvent events[];
 } dmbEpollData;
 
-
 typedef struct dmbConnect {
     dmbINT cliFd;
     dmbBYTE *readBuf;
     dmbBYTE *writeBuf;
     dmbUINT writeIndex;
     dmbUINT writeSize;
+    dmbUINT timeout;
     dmbNode node;
+    dmbNode timeoutNode;
 } dmbConnect;
+
+typedef struct dmbNetworkListener{
+    dmbCode (*onConnect)(void *);
+    void (*onClosed)(void*);
+    void *data;
+} dmbNetworkListener;
 
 typedef struct dmbNetworkContext {
     dmbEpollData *netData;
     dmbUINT connectSize;
     dmbList idleConnList;
+    dmbList timeoutConnList;
     dmbConnect *connects;
+    dmbNetworkListener *listener;
 } dmbNetworkContext;
 
 
-dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uEventNum);
+dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uEventNum, dmbNetworkListener *pListener);
 
 dmbCode dmbNetworkPurge(dmbNetworkContext *pCtx);
 
@@ -69,9 +78,9 @@ dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeo
 
 dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSOCKET listener);
 
-dmbCode dmbNetworkInitBuffer(dmbNetworkContext *pCtx, dmbUINT readBufSize, dmbUINT writeBufSize);
+dmbCode dmbNetworkInitConnectPool(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT readBufSize, dmbUINT writeBufSize);
 
-dmbCode dmbNetworkPurgeBuffer(dmbNetworkContext *pCtx);
+dmbCode dmbNetworkPurgeConnectPool(dmbNetworkContext *pCtx);
 
 dmbCode dmbNetworkAccept(dmbSOCKET listener, dmbSOCKET *pSocket);
 
@@ -79,7 +88,9 @@ dmbCode dmbNetworkListen(dmbSOCKET *pFd, const char *addr, int port, int backlog
 
 dmbCode dmbNetworkInitNewConnect(dmbSOCKET client);
 
-dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd);
+dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd, dmbLONG timeout);
+
+dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx);
 
 dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn);
 

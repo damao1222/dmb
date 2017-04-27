@@ -59,6 +59,7 @@
 #endif
 
 static volatile size_t g_used_memory = 0;
+static size_t g_max_memory = 1024*1024*512;
 
 #ifdef DMB_MALLOC_SIZE
 static const char PREFIX_SIZE = 0;
@@ -85,7 +86,7 @@ static void DefaultOOMHandle(size_t size)
 
 static inline __attribute__((always_inline)) dmbBOOL CheckCurrentMemoryUsage()
 {
-    if (InterlockedAddU64(&g_used_memory,0) >= 10000000)
+    if (InterlockedAddU64(&g_used_memory,0) >= g_max_memory)
     {
         DMB_LOGW("The current memory usage is bigger than the maxmemory value set via CONFIG SET.\n");
         return FALSE;
@@ -247,4 +248,9 @@ size_t dmbAllocSize(void *p)
 size_t dmbGetUsedMemSize()
 {
     return InterlockedAddU64(&g_used_memory,0);
+}
+
+void dmbSetMaxMemSize(size_t size)
+{
+    g_max_memory = size;
 }

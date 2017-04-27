@@ -20,6 +20,7 @@
 #include "core/dmbstring.h"
 #include "utils/dmbproperty.h"
 #include "utils/dmblog.h"
+#include "core/dmballoc.h"
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -59,12 +60,14 @@ dmbSettings g_settings;
 
 void dmbResetDefaultSettings()
 {
+    g_settings.max_mem_size = 512*1024*1024;
     strcpy(g_settings.host, "0.0.0.0");
     g_settings.port = 12345;
     g_settings.listen_backlog = 3000;
+    g_settings.net_rw_timeout = 15; //second
+    g_settings.connect_size_per_thread = 3000;
     g_settings.net_read_bufsize = 4194304; //4MB
     g_settings.net_write_bufsize = 4194304; //4MB
-    g_settings.connect_size_per_thread = 3000;
     g_settings.thread_size = 10;
     g_settings.open_files = 1024;
 }
@@ -144,14 +147,18 @@ dmbCode dmbLoadSettings(const dmbCHAR *confPath)
         return code;
     }
 
+    PARSE_INTSTRING(property, g_settings.max_mem_size, "max_mem_size");
     PARSE_STRING(property, g_settings.host, "host");
     PARSE_INT(property, g_settings.port, "port");
     PARSE_INT(property, g_settings.listen_backlog, "listen_backlog");
     PARSE_INT(property, g_settings.open_files, "open_files");
     PARSE_INT(property, g_settings.thread_size, "thread_size");
-    PARSE_INTSTRING(property, g_settings.connect_size_per_thread, "connect_size_per_thread");
+    PARSE_INT(property, g_settings.connect_size_per_thread, "connect_size_per_thread");
+    PARSE_INT(property, g_settings.net_rw_timeout, "net_rw_timeout");
     PARSE_INTSTRING(property, g_settings.net_read_bufsize, "net_read_bufsize");
     PARSE_INTSTRING(property, g_settings.net_write_bufsize, "net_write_bufsize");
+
+    dmbSetMaxMemSize((size_t) g_settings.max_mem_size);
 
     if (property != NULL)
         dmbPropertyDestroy(property);

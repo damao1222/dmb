@@ -24,25 +24,34 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include "utils/dmbioutil.h"
+#include "utils/dmbtime.h"
+#include "utils/dmblog.h"
 
 #define LINGER_TIMEOUT 60
 
 static dmbConnect *GetIdleConn(dmbNetworkContext *pCtx);
+static void watchTimeout(dmbNetworkContext *pCtx, dmbConnect *pConn, dmbLONG timeout);
 
-dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uEventNum)
+static dmbCode defaultOnConnect(void *p)
+{
+    DMB_UNUSED(p);
+    //Notice: have log lock.
+    DMB_LOGD("connect");
+    return DMB_ERRCODE_OK;
+}
+
+static void defaultOnClosed(void *p)
+{
+    DMB_UNUSED(p);
+    //Notice: have log lock.
+    DMB_LOGD("closed");
+}
+
+dmbNetworkListener g_defaultLister = {defaultOnConnect, defaultOnClosed, NULL};
+
+dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uEventNum, dmbNetworkListener *pListener)
 {
     dmbCode code = DMB_ERRCODE_OK;
-    dmbUINT i;
-    if (pCtx == NULL)
-    {
-        return DMB_ERRCODE_NULL_POINTER;
-    }
-
-    pCtx->connects = (dmbConnect*)dmbMalloc(sizeof(dmbConnect) * uConnectSize);
-    if (pCtx->connects == NULL)
-    {
-        return DMB_ERRCODE_ALLOC_FAILED;
-    }
 
     do {
         pCtx->netData = (dmbEpollData*)dmbMalloc(sizeof(dmbEpollData) + sizeof(struct epoll_event) * uEventNum);
@@ -61,44 +70,31 @@ dmbCode dmbNetworkInit(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT uE
                 break;
             }
 
-            dmbMemSet(pCtx->connects, 0, sizeof(dmbConnect) * uConnectSize);
             pCtx->netData->eventSize = uEventNum;
-            pCtx->connectSize = uConnectSize;
-
-            dmbListInit(&pCtx->idleConnList);
-
-            for (i=0; i<uConnectSize; ++i)
-            {
-                dmbListPushBack(&pCtx->idleConnList, &pCtx->connects[i].node);
-            }
-
+            pCtx->connectSize = 0;
+            pCtx->listener = pListener == NULL ? &g_defaultLister : pListener;
             return code;
         } while (0);
         DMB_SAFE_FREE(pCtx->netData);
     } while (0);
-    DMB_SAFE_FREE(pCtx->connects);
 
     return code;
 }
 
 dmbCode dmbNetworkPurge(dmbNetworkContext *pCtx)
 {
-    if (pCtx != NULL)
+    if (pCtx->netData != NULL)
     {
-        if (pCtx->netData != NULL)
+        if (pCtx->netData->epfd != -1)
         {
-            if (pCtx->netData->epfd != -1)
-            {
-                dmbSafeClose(pCtx->netData->epfd);
-                pCtx->netData->epfd = -1;
-            }
-
-            DMB_SAFE_FREE(pCtx->netData);
+            dmbSafeClose(pCtx->netData->epfd);
+            pCtx->netData->epfd = -1;
         }
-        DMB_SAFE_FREE(pCtx->connects);
+
+        DMB_SAFE_FREE(pCtx->netData);
     }
 
-    return DMB_ERRCODE_NULL_POINTER;
+    return DMB_ERRCODE_OK;
 }
 
 static dmbCode NetworkAddEvent(dmbNetworkContext *pCtx, int iFd, int iMask, dmbConnect *pConn, dmbBOOL add)
@@ -154,10 +150,17 @@ dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeo
 
 dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
-    dmbINT ret = dmbSafeClose(pConn->cliFd);
-    dmbListPushBack(&pCtx->idleConnList, &pConn->node);
+    dmbINT iRet = -1;
+    if (pConn->cliFd != DMB_INVALID_FD)
+    {
+        iRet = dmbSafeClose(pConn->cliFd);
+        pConn->cliFd = DMB_INVALID_FD;
 
-    return ret == 0 ? DMB_ERRCODE_OK : DMB_ERRCODE_NERWORK_CLOSE_FAILED;
+        dmbListPushBack(&pCtx->idleConnList, &pConn->node);
+        pCtx->listener->onClosed(pCtx->listener->data);
+    }
+
+    return iRet == 0 ? DMB_ERRCODE_OK : DMB_ERRCODE_NERWORK_CLOSE_FAILED;
 }
 
 static void read_test(dmbConnect *pConn)
@@ -177,62 +180,123 @@ dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSOCKET listener)
     dmbSOCKET client;
     dmbConnect *pConn = NULL;
     dmbCode code = dmbNetworkPoll(pCtx, &num, 10000);
+    dmbNetworkEvent *pEvent;
     if (code != DMB_ERRCODE_OK)
         return code;
 
-    for (i=0; i<num; ++i)
+    dmbNetworkEventForeach(pCtx, pEvent, i, num)
     {
-        if (pCtx->netData->events[i].data.ptr == NULL)
+        pConn = dmbNetworkGetConnect(pEvent);
+        if (pConn == NULL)
         {
             code = dmbNetworkAccept(listener, &client);
             if (code != DMB_ERRCODE_OK)
                 return code;
 
-            code = dmbNetworkProcessNewConnect(pCtx, client);
+            code = dmbNetworkInitNewConnect(client);
+            if (code != DMB_ERRCODE_OK)
+                return code;
+
+            code = dmbNetworkProcessNewConnect(pCtx, client, 0);
             if (code != DMB_ERRCODE_OK)
                 return code;
 
             continue;
         }
 
-        pConn = pCtx->netData->events[i].data.ptr;
-
-        if (pCtx->netData->events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
+        if (dmbNetworkBadConnect(pEvent))
         {
             dmbNetworkCloseConnect(pCtx, pConn);
             continue;
         }
 
-        if (pCtx->netData->events[i].events & EPOLLIN)
+        if (dmbNetworkCanRead(pEvent))
             read_test(pConn);
-        if (pCtx->netData->events[i].events & EPOLLOUT)
+        if (dmbNetworkCanWrite(pEvent))
             write_test(pConn);
     }
+
+    dmbNetworkCloseTimeoutConnect(pCtx);
 
     return code;
 }
 
-dmbCode dmbNetworkInitBuffer(dmbNetworkContext *pCtx, dmbUINT readBufSize, dmbUINT writeBufSize)
+dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx)
 {
-    dmbUINT i = 0;
-    dmbBYTE *whole = dmbMalloc(pCtx->connectSize * readBufSize + pCtx->connectSize * writeBufSize);\
-    if (whole == NULL)
-        return DMB_ERRCODE_ALLOC_FAILED;
-
-    for (; i<pCtx->connectSize; ++i)
+    dmbINT iCount = 0;
+    dmbConnect *pConn;
+    dmbListForeachEntry(pConn, &pCtx->timeoutConnList, timeoutNode)
     {
-        pCtx->connects[i].readBuf = whole;
-        whole += readBufSize;
-        pCtx->connects[i].writeBuf = whole;
-        whole += writeBufSize;
+        if (pConn->timeout > 0 && dmbLocalCurrentSec() > pConn->timeout)
+        {
+            ++iCount;
+            dmbListRemove(&pConn->timeoutNode);
+            dmbNetworkCloseConnect(pCtx, pConn);
+        }
     }
-
-    return DMB_ERRCODE_OK;
+    return iCount;
 }
 
-dmbCode dmbNetworkPurgeBuffer(dmbNetworkContext *pCtx)
+dmbCode dmbNetworkInitConnectPool(dmbNetworkContext *pCtx, dmbUINT uConnectSize, dmbUINT readBufSize, dmbUINT writeBufSize)
 {
-    DMB_SAFE_FREE(pCtx->connects[0].readBuf);
+    dmbUINT i = 0;
+    dmbCode code = DMB_ERRCODE_OK;
+
+    pCtx->connects = (dmbConnect*)dmbMalloc(sizeof(dmbConnect) * uConnectSize);
+    if (pCtx->connects == NULL)
+    {
+        return DMB_ERRCODE_ALLOC_FAILED;
+    }
+
+    do {
+        dmbMemSet(pCtx->connects, 0, sizeof(dmbConnect) * uConnectSize);
+        pCtx->connectSize = uConnectSize;
+
+        dmbListInit(&pCtx->idleConnList);
+        dmbListInit(&pCtx->timeoutConnList);
+
+        for (i=0; i<uConnectSize; ++i)
+        {
+            pCtx->connects[i].cliFd = DMB_INVALID_FD;
+            pCtx->connects[i].timeout = 0; //nerver timeout
+            dmbListPushBack(&pCtx->idleConnList, &pCtx->connects[i].node);
+        }
+
+        dmbBYTE *whole = dmbMalloc(pCtx->connectSize * readBufSize + pCtx->connectSize * writeBufSize);\
+        if (whole == NULL)
+        {
+            code = DMB_ERRCODE_ALLOC_FAILED;
+            break;
+        }
+        do {
+            for (i=0; i<pCtx->connectSize; ++i)
+            {
+                pCtx->connects[i].readBuf = whole;
+                whole += readBufSize;
+                pCtx->connects[i].writeBuf = whole;
+                whole += writeBufSize;
+            }
+            return DMB_ERRCODE_OK;
+        } while (0);
+        DMB_SAFE_FREE(whole);
+    } while (0);
+    DMB_SAFE_FREE(pCtx->connects);
+
+    return code;
+}
+
+dmbCode dmbNetworkPurgeConnectPool(dmbNetworkContext *pCtx)
+{
+    if (pCtx->connects != NULL)
+    {
+        dmbUINT i;
+        for (i=0; i<pCtx->connectSize; ++i)
+        {
+            dmbNetworkCloseConnect(pCtx, &pCtx->connects[i]);
+        }
+        DMB_SAFE_FREE(pCtx->connects[0].readBuf);
+        DMB_SAFE_FREE(pCtx->connects);
+    }
     return DMB_ERRCODE_OK;
 }
 
@@ -428,17 +492,27 @@ dmbCode dmbNetworkInitNewConnect(dmbSOCKET client)
     return code;
 }
 
-dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd)
+dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd, dmbLONG timeout)
 {
-    dmbCode code = dmbNetworkInitNewConnect(fd);
+    dmbCode code = pCtx->listener->onConnect(pCtx->listener->data);
     if (code != DMB_ERRCODE_OK)
+    {
+        dmbSafeClose(fd);
         return code;
+    }
 
     dmbConnect *pConn = GetIdleConn(pCtx);
     if (pConn == NULL)
         return DMB_ERRCODE_NETWORK_ERROR;
 
-    return dmbNetworkAddEvent(pCtx, fd, DMB_NW_READ | DMB_NW_WRITE, pConn);
+    code = dmbNetworkAddEvent(pCtx, fd, DMB_NW_READ | DMB_NW_WRITE, pConn);
+
+    if (code != DMB_ERRCODE_OK)
+        dmbNetworkCloseConnect(pCtx, pConn);
+    else
+        watchTimeout(pCtx, pConn, timeout);
+
+    return code;
 }
 
 static dmbConnect *GetIdleConn(dmbNetworkContext *pCtx)
@@ -448,4 +522,13 @@ static dmbConnect *GetIdleConn(dmbNetworkContext *pCtx)
         return NULL;
 
     return dmbListEntry(node, dmbConnect, node);
+}
+
+static void watchTimeout(dmbNetworkContext *pCtx, dmbConnect *pConn, dmbLONG timeout)
+{
+    if (timeout > 0)
+    {
+        pConn->timeout = dmbLocalCurrentSec() + timeout;
+        dmbListPushBack(&pCtx->timeoutConnList, &pConn->timeoutNode);
+    }
 }

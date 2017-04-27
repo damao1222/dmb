@@ -15,28 +15,9 @@
     limitations under the License.
 */
 
-#ifndef DMBSETTINGS_H
-#define DMBSETTINGS_H
+#ifndef DMBNETWORK_TEST_H
+#define DMBNETWORK_TEST_H
 
-#include "dmbdefines.h"
+void dmbnetwork_test();
 
-typedef struct dmbSettings{
-    dmbLONG max_mem_size;
-    dmbCHAR host[16];
-    dmbINT port;
-    dmbINT listen_backlog;
-    dmbINT open_files;
-    dmbINT thread_size;
-    dmbUINT connect_size_per_thread;
-    dmbUINT net_rw_timeout;
-    dmbUINT net_read_bufsize;
-    dmbUINT net_write_bufsize;
-} dmbSettings;
-
-void dmbResetDefaultSettings();
-
-dmbCode dmbLoadSettings(const dmbCHAR *confPath);
-
-extern dmbSettings g_settings;
-
-#endif // DMBSETTINGS_H
+#endif // DMBNETWORK_TEST_H
