@@ -35,8 +35,7 @@ typedef struct dmbThread{
 void dmbThreadInit(dmbThread *pThread, dmbThreadFunc func, dmbCheckFunc check, void *pParam);
 dmbCode dmbThreadStart(dmbThread *pThread);
 dmbCode dmbThreadJoin(dmbThread *pThread);
-dmbBOOL dmbThreadRunning(dmbThreadData data);
-void* dmbThreadGetParam(dmbThreadData data);
+void dmbSleep(dmbUINT uMilliSec);
 
 #define dmbThreadRunning(DATA) \
     (((dmbThread*)(DATA))->checkFunc ? ((dmbThread*)(DATA))->checkFunc() : TRUE)

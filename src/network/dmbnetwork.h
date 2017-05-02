@@ -40,9 +40,11 @@ typedef struct dmbEpollData {
 typedef struct dmbConnect {
     dmbINT cliFd;
     dmbBYTE *readBuf;
+    dmbUINT readIndex;
+    dmbUINT readBufSize;
     dmbBYTE *writeBuf;
     dmbUINT writeIndex;
-    dmbUINT writeSize;
+    dmbUINT writeBufSize;
     dmbUINT timeout;
     dmbNode node;
     dmbNode timeoutNode;
@@ -95,9 +97,9 @@ dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx);
 dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn);
 
 #define dmbNetworkGetConnect(EVENT_PTR) ((dmbConnect*)(EVENT_PTR)->data.ptr)
-#define dmbNetworkBadConnect(EVENT_PTR) ((EVENT_PTR)->events & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
-#define dmbNetworkCanRead(EVENT_PTR) ((EVENT_PTR)->events & EPOLLIN)
-#define dmbNetworkCanWrite(EVENT_PTR) ((EVENT_PTR)->events & EPOLLOUT)
+#define dmbNetworkBadConnect(EVENT_PTR) (((EVENT_PTR)->events) & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
+#define dmbNetworkCanRead(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLIN)
+#define dmbNetworkCanWrite(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLOUT)
 
 #define dmbNetworkEventForeach(CTX, EVENT_PTR, INDEX, NUM) \
     for (INDEX=0, EVENT_PTR=&CTX->netData->events[INDEX]; \

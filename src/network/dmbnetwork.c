@@ -272,8 +272,12 @@ dmbCode dmbNetworkInitConnectPool(dmbNetworkContext *pCtx, dmbUINT uConnectSize,
             for (i=0; i<pCtx->connectSize; ++i)
             {
                 pCtx->connects[i].readBuf = whole;
+                pCtx->connects[i].readBufSize = readBufSize;
+                pCtx->connects[i].readIndex = 0;
                 whole += readBufSize;
                 pCtx->connects[i].writeBuf = whole;
+                pCtx->connects[i].writeBufSize = writeBufSize;
+                pCtx->connects[i].writeIndex = 0;
                 whole += writeBufSize;
             }
             return DMB_ERRCODE_OK;

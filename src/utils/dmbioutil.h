@@ -53,6 +53,31 @@ static inline ssize_t dmbSafeRead(int fd, dmbBYTE *pBuf, ssize_t count)
     return cur;
 }
 
+static inline ssize_t dmbAvailableRead(int fd, dmbBYTE *pBuf, ssize_t count)
+{
+    int err;
+    ssize_t ret = -1, cur = 0;
+
+    while (cur == 0)
+    {
+        ret = read(fd, pBuf + cur, count - cur);
+        if (ret == -1)
+        {
+            err = errno;
+            if (err == EINTR)
+                continue;
+            else if (err == EAGAIN || err == EWOULDBLOCK)
+                return DMB_IO_EAGAIN;
+            else
+                return DMB_IO_ERROR;
+        }
+
+        cur += ret;
+    }
+
+    return cur;
+}
+
 static inline ssize_t dmbSafeWrite(int fd, dmbBYTE *pBuf, ssize_t count)
 {
     int err;

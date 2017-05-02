@@ -19,6 +19,7 @@
 #include "dmbtest.h"
 #include "network/dmbservercore.h"
 #include "utils/dmbtime.h"
+#include "thread/dmbthread.h"
 
 static void testServer();
 
@@ -36,10 +37,10 @@ static void testServer()
     DMB_TEST_P1(code, dmbInitWorkThreads, &ctx);
     DMB_TEST_P1(code, dmbInitAcceptThread, &ctx);
 
-    dmbEndTimeInit(&time, 1*1000);
+    dmbEndTimeInit(&time, 3600*1000);
     while (!dmbEndTimeIsExpired(&time))
     {
-
+        dmbSleep(100);
     }
 
     dmbStopApp();

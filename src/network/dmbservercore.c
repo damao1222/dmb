@@ -237,7 +237,7 @@ void * acceptThreadImpl (dmbThreadData data)
 static dmbCode processNewConnect(dmbWorkThreadData *pData)
 {
     dmbINT i, iCount, iRemain;
-    dmbINT iReadLen = dmbSafeRead(pData->pipeArr[0], pData->cliSoDataArr+pData->cliSoDataIndex, DMB_CLISO_ARR_LEN(pData));
+    dmbINT iReadLen = dmbAvailableRead(pData->pipeArr[0], pData->cliSoDataArr+pData->cliSoDataIndex, DMB_CLISO_ARR_LEN(pData));
     DMB_ASSERT(iReadLen > 0);
     pData->cliSoDataIndex += iReadLen;
     iCount = pData->cliSoDataIndex / sizeof(dmbSOCKET);

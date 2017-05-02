@@ -16,6 +16,7 @@
 */
 
 #include "dmbthread.h"
+#include <unistd.h>
 
 void* static_run(void *data);
 
@@ -40,6 +41,11 @@ dmbCode dmbThreadJoin(dmbThread *pThread)
         return DMB_ERRCODE_OK;
 
     return pthread_join(pThread->id, NULL) == 0 ? DMB_ERRCODE_OK : DMB_ERRCODE_THREAD_ERROR;
+}
+
+void dmbSleep(dmbUINT uMilliSec)
+{
+    usleep(uMilliSec * 1000);
 }
 
 void* static_run(void *data)
