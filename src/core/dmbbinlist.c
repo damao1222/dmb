@@ -370,8 +370,6 @@ dmbCode dmbBinEntryMerge(dmbBinAllocator *pAllocator, dmbBinlist **pList, dmbBin
     return code;
 }
 
-#include "utils/dmblog.h"
-
 dmbCode dmbBinListMerge(dmbBinAllocator *pAllocator, dmbBinlist **pDestList, dmbBinlist *pSrcList, dmbBOOL mergeLast)
 {
     dmbUINT uDestLen, uDestAllLen, uSrcLen, uSrcAllLen;

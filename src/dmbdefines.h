@@ -96,6 +96,18 @@ typedef dmbINT16 dmbCode;
 //连接关闭时错误
 #define DMB_ERRCODE_NERWORK_CLOSE_FAILED 13
 
+//########51-100协议错误码#######
+//协议包检查错误
+#define DMB_ERRCODE_PROTOCOL_ERROR 51
+//协议版本错误
+#define DMB_ERRCODE_VERSION_ERROR 52
+//客户端发送的一包数据超出服务器端读缓存大小
+#define DMB_ERRCODE_OUT_OF_READBUF 61
+//服务器端发送的一包数据超出写缓存大小
+#define DMB_ERRCODE_OUT_OF_WRITEBUF 62
+//合并包出错
+#define DMB_ERRCODE_MERGE_PKG_FAILED 63
+
 //########501-600系统操作错误码####
 //内存分配失败
 #define DMB_ERRCODE_ALLOC_FAILED 501

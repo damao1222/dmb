@@ -32,7 +32,9 @@ SOURCES += \
     src/core/dmbdictmetas.c \
     src/base/dmbsettings.c \
     src/tests/dmbutils_test.c \
-    src/tests/dmbnetwork_test.c
+    src/tests/dmbnetwork_test.c \
+    src/network/dmbprotocol.c \
+    src/utils/dmbioutil.c
     
 HEADERS += \ 
     src/dmbdefines.h \
@@ -63,7 +65,8 @@ HEADERS += \
     src/base/dmbsettings.h \
     src/tests/dmbutils_test.h \
     src/tests/dmbnetwork_test.h \
-    src/tests/dmbtest.h
+    src/tests/dmbtest.h \
+    src/network/dmbprotocol.h
 
 DEFINES += DMB_USE_JEMALLOC
 DEFINES += DMB_DEBUG

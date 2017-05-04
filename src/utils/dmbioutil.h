@@ -23,87 +23,17 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define DMB_IO_EAGAIN -1
+#define DMB_IO_END 0
+#define DMB_IO_AGAIN -1
 #define DMB_IO_ERROR -2
 
-static inline ssize_t dmbSafeRead(int fd, dmbBYTE *pBuf, ssize_t count)
-{
-    int err;
-    ssize_t ret = -1, cur = 0;
+ssize_t dmbSafeRead(int fd, dmbBYTE *pBuf, ssize_t count);
 
-    while (cur != count)
-    {
-        ret = read(fd, pBuf + cur, count - cur);
-        if (ret == -1)
-        {
-            err = errno;
-            if (err == EINTR)
-                continue;
-            else if (err == EAGAIN || err == EWOULDBLOCK)
-                return DMB_IO_EAGAIN;
-            else
-                return DMB_IO_ERROR;
-        }
-        else if (ret == 0)
-            break;
+ssize_t dmbSafeWrite(int fd, dmbBYTE *pBuf, ssize_t count);
 
-        cur += ret;
-    }
+ssize_t dmbReadAvailable(int fd, dmbBYTE *pBuf, ssize_t count);
 
-    return cur;
-}
-
-static inline ssize_t dmbAvailableRead(int fd, dmbBYTE *pBuf, ssize_t count)
-{
-    int err;
-    ssize_t ret = -1, cur = 0;
-
-    while (cur == 0)
-    {
-        ret = read(fd, pBuf + cur, count - cur);
-        if (ret == -1)
-        {
-            err = errno;
-            if (err == EINTR)
-                continue;
-            else if (err == EAGAIN || err == EWOULDBLOCK)
-                return DMB_IO_EAGAIN;
-            else
-                return DMB_IO_ERROR;
-        }
-
-        cur += ret;
-    }
-
-    return cur;
-}
-
-static inline ssize_t dmbSafeWrite(int fd, dmbBYTE *pBuf, ssize_t count)
-{
-    int err;
-    ssize_t ret = -1, cur = 0;
-
-    while (cur != count)
-    {
-        ret = write(fd, pBuf + cur, count - cur);
-        if (ret == -1)
-        {
-            err = errno;
-            if (err == EINTR)
-                continue;
-            else if (err == EAGAIN || err == EWOULDBLOCK)
-                return DMB_IO_EAGAIN;
-            else
-                return DMB_IO_ERROR;
-        }
-        else if (ret == 0)
-            break;
-
-        cur += ret;
-    }
-
-    return cur;
-}
+ssize_t dmbWriteAvailable(int fd, dmbBYTE *pBuf, ssize_t count);
 
 #define EINTR_LOOP(var, cmd)                    \
     do {                                        \

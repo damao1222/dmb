@@ -37,14 +37,25 @@ typedef struct dmbEpollData {
     dmbNetworkEvent events[];
 } dmbEpollData;
 
+typedef struct dmbConnReq {
+    dmbBYTE *data;
+    dmbUINT len;
+    dmbCode (*merge) (struct dmbConnReq*, dmbBYTE*, dmbUINT);
+    void (*release) (struct dmbConnReq*);
+} dmbConnReq;
+
 typedef struct dmbConnect {
     dmbINT cliFd;
     dmbBYTE *readBuf;
     dmbUINT readIndex;
     dmbUINT readBufSize;
+    dmbUINT readLength;
+    dmbUINT requestIndex;
+    dmbConnReq request;
     dmbBYTE *writeBuf;
     dmbUINT writeIndex;
     dmbUINT writeBufSize;
+    dmbUINT writeLength;
     dmbUINT timeout;
     dmbNode node;
     dmbNode timeoutNode;
@@ -92,13 +103,18 @@ dmbCode dmbNetworkInitNewConnect(dmbSOCKET client);
 
 dmbCode dmbNetworkProcessNewConnect(dmbNetworkContext *pCtx, dmbSOCKET fd, dmbLONG timeout);
 
+void dmbNetworkWatchTimeout(dmbNetworkContext *pCtx, dmbConnect *pConn, dmbLONG timeout);
+
 dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx);
 
 dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn);
 
 #define dmbNetworkGetConnect(EVENT_PTR) ((dmbConnect*)(EVENT_PTR)->data.ptr)
+
 #define dmbNetworkBadConnect(EVENT_PTR) (((EVENT_PTR)->events) & (EPOLLRDHUP | EPOLLHUP | EPOLLPRI | EPOLLERR))
+
 #define dmbNetworkCanRead(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLIN)
+
 #define dmbNetworkCanWrite(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLOUT)
 
 #define dmbNetworkEventForeach(CTX, EVENT_PTR, INDEX, NUM) \

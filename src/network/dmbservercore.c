@@ -21,6 +21,7 @@
 #include "utils/dmbioutil.h"
 #include "thread/dmbatomic.h"
 #include <sys/socket.h>
+#include "dmbprotocol.h"
 
 #define DEFAULT_SELECT_TIMEOUT 5 //second
 #define DEFAULT_SELECT_EPOLL_TIMEOUT 5000 //millisecond
@@ -237,7 +238,7 @@ void * acceptThreadImpl (dmbThreadData data)
 static dmbCode processNewConnect(dmbWorkThreadData *pData)
 {
     dmbINT i, iCount, iRemain;
-    dmbINT iReadLen = dmbAvailableRead(pData->pipeArr[0], pData->cliSoDataArr+pData->cliSoDataIndex, DMB_CLISO_ARR_LEN(pData));
+    dmbINT iReadLen = dmbReadAvailable(pData->pipeArr[0], pData->cliSoDataArr+pData->cliSoDataIndex, DMB_CLISO_ARR_LEN(pData));
     DMB_ASSERT(iReadLen > 0);
     pData->cliSoDataIndex += iReadLen;
     iCount = pData->cliSoDataIndex / sizeof(dmbSOCKET);
@@ -292,15 +293,7 @@ void * workThreadImpl (dmbThreadData data)
                 continue;
             }
 
-            if (dmbNetworkCanRead(pEvent))
-            {
-//                read_test(pConn);
-            }
-
-            if (dmbNetworkCanWrite(pEvent))
-            {
-//                write_test(pConn);
-            }
+            dmbProcessEvent(pCtx, pEvent, pConn);
         }
 
         dmbNetworkCloseTimeoutConnect(pCtx);
@@ -308,3 +301,4 @@ void * workThreadImpl (dmbThreadData data)
 
     return NULL;
 }
+
