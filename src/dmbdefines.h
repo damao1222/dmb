@@ -89,14 +89,17 @@ typedef dmbINT16 dmbCode;
 //一切正常
 #define DMB_ERRCODE_OK DMB_OK
 
-//########11-50网络错误码#######
-#define DMB_ERRCODE_NETWORK_ERROR 11
+//########11-100网络及协议错误码#######
 //非阻塞模式，accept没有收到连接请求，需要重试
-#define DMB_ERRCODE_NETWORK_AGAIN 12
+#define DMB_ERRCODE_NETWORK_AGAIN 11
 //连接关闭时错误
-#define DMB_ERRCODE_NERWORK_CLOSE_FAILED 13
-
-//########51-100协议错误码#######
+#define DMB_ERRCODE_NERWORK_CLOSE_FAILED 12
+//连接已正常关闭
+#define DMB_ERRCODE_NERWORK_CLOSED 13
+//需要关闭的网络错误码起始
+#define DMB_ERRCODE_NETWORK_ERRBEGIN 20
+//网络异常
+#define DMB_ERRCODE_NETWORK_ERROR 21
 //协议包检查错误
 #define DMB_ERRCODE_PROTOCOL_ERROR 51
 //协议版本错误
@@ -107,6 +110,8 @@ typedef dmbINT16 dmbCode;
 #define DMB_ERRCODE_OUT_OF_WRITEBUF 62
 //合并包出错
 #define DMB_ERRCODE_MERGE_PKG_FAILED 63
+//需要关闭的网络错误码结束
+#define DMB_ERRCODE_NETWORK_ERREND 100
 
 //########501-600系统操作错误码####
 //内存分配失败

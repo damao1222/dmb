@@ -21,8 +21,14 @@
 #include "utils/dmblog.h"
 #include "core/dmballoc.h"
 
-static dmbCode writeData(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbConnect *pConn);
+static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn);
+static dmbCode processData(dmbConnect *pConn);
+static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn);
 dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbUINT uSize);
+static inline dmbBOOL needDisconnect(dmbCode code)
+{
+    return code > DMB_ERRCODE_NETWORK_ERRBEGIN && code < DMB_ERRCODE_NETWORK_ERREND;
+}
 
 static dmbCode parsePkgHeader(dmbBYTE *pBuf, dmbRequest **pDestRequest)
 {
@@ -41,27 +47,31 @@ static dmbCode parsePkgHeader(dmbBYTE *pBuf, dmbRequest **pDestRequest)
 
 void dmbMakeErrorResponse(dmbConnect *pConn, dmbCode code)
 {
-    dmbResponse *pResp = (dmbResponse*) pConn->writeBuf + pConn->writeIndex;
+    dmbResponse *pResp = (dmbResponse*) pConn->writeBuf;
     pResp->magicNum = DMB_MAGIC_NUMBER;
     pResp->version = DMB_VERSION;
     pResp->status = code;
+    pConn->needClose = needDisconnect(code);
 
     pResp->length = 0;
+    pConn->writeIndex = 0;
     pConn->writeLength += dmbResponseHeaderSize;
 }
 
 void dmbMakeErrorResponseWithData(dmbConnect *pConn, dmbCode code, dmbBYTE *pData, dmbUINT uSize)
 {
-    dmbResponse *pResp = (dmbResponse*) pConn->writeBuf + pConn->writeIndex;
+    dmbResponse *pResp = (dmbResponse*) pConn->writeBuf;
     pResp->magicNum = DMB_MAGIC_NUMBER;
     pResp->version = DMB_VERSION;
     pResp->status = code;
 
+    pConn->writeIndex = 0;
     if (dmbResponseHeaderSize + uSize > g_settings.net_write_bufsize)
     {
         pResp->status = DMB_ERRCODE_OUT_OF_WRITEBUF;
         pResp->length = 0;
         pConn->writeLength += dmbResponseHeaderSize;
+        pConn->needClose = TRUE;
         return ;
     }
     pResp->length = uSize;
@@ -69,171 +79,184 @@ void dmbMakeErrorResponseWithData(dmbConnect *pConn, dmbCode code, dmbBYTE *pDat
     dmbMemCopy(pConn->writeBuf+pConn->writeIndex, pData, uSize);
 }
 
-dmbCode dmbProcessEvent(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbConnect *pConn)
+void dmbProcessEvent(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
-    dmbCode code = DMB_ERRCODE_OK;
-    ssize_t ret = 0;
-    dmbBOOL bResetTimeout = FALSE;
-    while (TRUE)
+    dmbCode readCode, dataCode, writeCode;
+
+    readCode = readData(pCtx, pConn);
+
+    if (readCode == DMB_ERRCODE_NETWORK_ERROR || readCode == DMB_ERRCODE_NERWORK_CLOSED)
+        return ;
+
+    if (!dmbConnectIsBlocked(pConn))
+        dataCode = processData(pConn);
+
+    writeCode = writeData(pCtx, pConn);
+
+    if (pConn->needClose)
+        dmbNetworkCloseConnect(pCtx, pConn);
+
+    if (readCode == DMB_ERRCODE_NETWORK_AGAIN &&
+        (writeCode == DMB_ERRCODE_NETWORK_AGAIN ||
+         dataCode == DMB_ERRCODE_NETWORK_AGAIN))
     {
-        if (dmbNetworkCanRead(pEvent))
-        {
-            do {
-                ret = dmbReadAvailable(pConn->cliFd, pConn->readBuf + pConn->readIndex, pConn->readBufSize - pConn->readIndex);
-                if (ret == DMB_IO_AGAIN)
-                {
-                    DMB_LOGD("Read again\n");
-                    bResetTimeout = TRUE;
-                    code = DMB_ERRCODE_NETWORK_AGAIN;
-                    break;
-                }
-                else if (ret == DMB_IO_ERROR)
-                {
-                    DMB_LOGD("Read error\n");
-                    dmbNetworkCloseConnect(pCtx, pConn);
-                    code = DMB_ERRCODE_NETWORK_ERROR;
-                    break;
-                }
-                else if (ret == DMB_IO_END)
-                {
-                    DMB_LOGD("Read end\n");
-                    dmbNetworkCloseConnect(pCtx, pConn);
-                    break;
-                }
-                else
-                {
-                    dmbRequest *pRequest;
-                    pConn->readIndex += ret;
-                    pConn->readLength += ret;
+        //ALL DONE
+    }
+    else
+    {
+        //add to round robin list
+    }
+}
 
-                    if (pConn->readLength < dmbRequestHeaderSize)
-                    {
-                        continue;
-                    }
-ProcessHeader:
-                    code = parsePkgHeader(pConn->readBuf + pConn->requestIndex, &pRequest);
-                    if (code != DMB_ERRCODE_OK)
-                    {
-                        if (pRequest->length + dmbResponseHeaderSize > g_settings.net_read_bufsize)
-                        {
-                            code = DMB_ERRCODE_OUT_OF_READBUF;
-                            dmbMakeErrorResponseWithData(pConn, code, g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
-                        }
-                        else
-                        {
-                            dmbMakeErrorResponse(pConn, code);
-                        }
-                        break;
-                    }
+dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbUINT uSize)
+{
+    DMB_UNUSED(pConn);
+    DMB_UNUSED(iCmd);
+    DMB_UNUSED(pData);
+    DMB_UNUSED(uSize);
 
-                    if (pRequest->length > pConn->readLength - dmbResponseHeaderSize)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        if (pRequest->multiPkg)
-                        {
-                            code = pConn->request.merge(&pConn->request, pConn->readBuf + pConn->requestIndex, pRequest->length);
-                            if (code != DMB_ERRCODE_OK)
-                            {
-                                code = DMB_ERRCODE_MERGE_PKG_FAILED;
-                                dmbMakeErrorResponse(pConn, code);
-                                pConn->request.release(&pConn->request);
-                                break;
-                            }
+    return DMB_ERRCODE_OK;
+}
 
-                            if (pRequest->multiEnd)
-                            {
-                                code = dmbProcessPackage(pConn, pRequest->cmd, pConn->request.data, pConn->request.len);
-                            }
-                        }
-                        else
-                        {
-                            code = dmbProcessPackage(pConn, pRequest->cmd, pConn->readBuf + pConn->requestIndex + dmbResponseHeaderSize, pRequest->length);
-                        }
-
-                        pConn->readLength -= (dmbResponseHeaderSize + pRequest->length);
-                        pConn->readIndex -= pConn->readLength;
-                        if (pConn->readLength > 0)
-                        {
-                            dmbMemMove(pConn->readBuf + pConn->requestIndex,
-                                       pConn->readBuf + pConn->requestIndex + dmbResponseHeaderSize + pRequest->length,
-                                       pConn->readLength);
-                        }
-                    }
-                }
-            } while (0);
-        }
-
-        if (dmbNetworkCanWrite(pEvent))
-        {
-            while (TRUE)
+static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn)
+{
+    ssize_t ret = 0;
+    dmbCode code = DMB_ERRCODE_OK;
+    if (dmbConnectCanRead(pConn))
+    {
+        do {
+            //Need add to roundrobinlist and continue read.
+            if (pConn->readBufSize <= pConn->readIndex)
             {
-                ret = dmbWriteAvailable(pConn->cliFd, pConn->writeBuf + pConn->writeIndex, pConn->writeLength);
-                if (ret == DMB_IO_AGAIN)
+                dmbNetworkWatchTimeout(pCtx, pConn, g_settings.net_rw_timeout);
+                return code;
+            }
+
+            ret = dmbReadAvailable(pConn->cliFd, pConn->readBuf + pConn->readIndex, pConn->readBufSize - pConn->readIndex);
+            if (ret == DMB_IO_AGAIN)
+            {
+                DMB_LOGD("Read again\n");
+                pConn->canRead = FALSE;
+                code = DMB_ERRCODE_NETWORK_AGAIN;
+                dmbNetworkWatchTimeout(pCtx, pConn, g_settings.net_rw_timeout);
+                break;
+            }
+            else if (ret == DMB_IO_ERROR)
+            {
+                DMB_LOGD("Read error\n");
+                dmbNetworkCloseConnect(pCtx, pConn);
+                code = DMB_ERRCODE_NETWORK_ERROR;
+                break;
+            }
+            else if (ret == DMB_IO_END)
+            {
+                DMB_LOGD("Read end\n");
+                dmbNetworkCloseConnect(pCtx, pConn);
+                code = DMB_ERRCODE_NERWORK_CLOSED;
+                break;
+            }
+            else
+            {
+                pConn->readIndex += ret;
+                pConn->readLength += ret;
+
+                if (pConn->readLength < dmbRequestHeaderSize)
                 {
-                    DMB_LOGD("Write again\n");
-                    code = DMB_ERRCODE_NETWORK_AGAIN;
-                    break;
-                }
-                else if (ret == DMB_IO_ERROR)
-                {
-                    DMB_LOGD("Write error\n");
-                    dmbNetworkCloseConnect(pCtx, pConn);
-                    code = DMB_ERRCODE_NETWORK_ERROR;
-                    break;
-                }
-                else if (ret == DMB_IO_END)
-                {
-                    DMB_LOGD("Write end\n");
-                    dmbNetworkCloseConnect(pCtx, pConn);
-                    break;
-                }
-                else
-                {
-                    pConn->writeIndex += ret;
-                    pConn->writeLength -= ret;
-                    if (pConn->writeLength > 0)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pConn->writeIndex = 0;
-                        return DMB_ERRCODE_OK;
-                    }
+                    continue;
                 }
             }
-        }
+        } while (0);
     }
-
-    if (bResetTimeout)
+    else
     {
-        dmbNetworkWatchTimeout(pCtx, pConn, g_settings.net_rw_timeout);
+        return DMB_ERRCODE_NETWORK_AGAIN;
     }
 
     return code;
 }
 
-dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbUINT uSize)
+static dmbCode processData(dmbConnect *pConn)
 {
+    dmbCode code = DMB_ERRCODE_OK;
+    dmbRequest *pRequest;
 
+    if (pConn->readLength < dmbRequestHeaderSize)
+    {
+        return DMB_ERRCODE_NETWORK_AGAIN;
+    }
+
+    code = parsePkgHeader(pConn->readBuf + pConn->requestIndex, &pRequest);
+    if (code != DMB_ERRCODE_OK)
+    {
+        if (pRequest->length + dmbResponseHeaderSize > g_settings.net_read_bufsize)
+        {
+            code = DMB_ERRCODE_OUT_OF_READBUF;
+            dmbMakeErrorResponseWithData(pConn, code, (dmbBYTE*)&g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
+        }
+        else
+        {
+            dmbMakeErrorResponse(pConn, code);
+        }
+        return code;
+    }
+
+    if (pRequest->length < pConn->readLength - dmbResponseHeaderSize)
+    {
+        do {
+            if (pRequest->multiPkg)
+            {
+                code = pConn->request.merge(&pConn->request, pConn->readBuf + pConn->requestIndex, pRequest->length);
+                if (code != DMB_ERRCODE_OK)
+                {
+                    code = DMB_ERRCODE_MERGE_PKG_FAILED;
+                    dmbMakeErrorResponse(pConn, code);
+                    pConn->request.release(&pConn->request);
+                    break;
+                }
+
+                if (pRequest->multiEnd)
+                {
+                    code = dmbProcessPackage(pConn, pRequest->cmd, pConn->request.data, pConn->request.len);
+                }
+            }
+            else
+            {
+                code = dmbProcessPackage(pConn, pRequest->cmd, pConn->readBuf + pConn->requestIndex + dmbResponseHeaderSize, pRequest->length);
+            }
+        } while (0);
+
+        pConn->readLength -= (dmbResponseHeaderSize + pRequest->length);
+        pConn->readIndex -= pConn->readLength;
+        if (pConn->readLength > 0)
+        {
+            dmbMemMove(pConn->readBuf + pConn->requestIndex,
+                       pConn->readBuf + pConn->requestIndex + dmbResponseHeaderSize + pRequest->length,
+                       pConn->readLength);
+        }
+    }
+    else
+    {
+        return DMB_ERRCODE_NETWORK_AGAIN;
+    }
+
+    return code;
 }
 
-static dmbCode writeData(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbConnect *pConn)
+static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
     dmbCode code = DMB_ERRCODE_OK;
     ssize_t ret = 0;
-    if (dmbNetworkCanWrite(pEvent))
+    if (dmbConnectCanWrite(pConn))
     {
-        while (TRUE)
-        {
+        do {
             ret = dmbWriteAvailable(pConn->cliFd, pConn->writeBuf + pConn->writeIndex, pConn->writeLength);
             if (ret == DMB_IO_AGAIN)
             {
                 DMB_LOGD("Write again\n");
+                pConn->canWrite = FALSE;
+                pConn->isblocked = TRUE;
                 code = DMB_ERRCODE_NETWORK_AGAIN;
+                dmbNetworkWatchTimeout(pCtx, pConn, g_settings.net_rw_timeout);
                 break;
             }
             else if (ret == DMB_IO_ERROR)
@@ -246,11 +269,10 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbCo
             else if (ret == DMB_IO_END)
             {
                 DMB_LOGD("Write end\n");
-                dmbNetworkCloseConnect(pCtx, pConn);
-                break;
             }
             else
             {
+                //write response
                 pConn->writeIndex += ret;
                 pConn->writeLength -= ret;
                 if (pConn->writeLength > 0)
@@ -259,11 +281,12 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbCo
                 }
                 else
                 {
+                    pConn->isblocked = FALSE;
                     pConn->writeIndex = 0;
                     return DMB_ERRCODE_OK;
                 }
             }
-        }
+        } while (0);
     }
     else
     {

@@ -47,6 +47,9 @@ typedef struct dmbConnReq {
 typedef struct dmbConnect {
     dmbINT cliFd;
     dmbBYTE *readBuf;
+    dmbBOOL canRead;
+    dmbBOOL canWrite;
+    dmbBOOL isblocked;
     dmbUINT readIndex;
     dmbUINT readBufSize;
     dmbUINT readLength;
@@ -56,8 +59,9 @@ typedef struct dmbConnect {
     dmbUINT writeIndex;
     dmbUINT writeBufSize;
     dmbUINT writeLength;
+    dmbBOOL needClose;
     dmbUINT timeout;
-    dmbNode node;
+    dmbNode idleNode;
     dmbNode timeoutNode;
 } dmbConnect;
 
@@ -72,6 +76,7 @@ typedef struct dmbNetworkContext {
     dmbUINT connectSize;
     dmbList idleConnList;
     dmbList timeoutConnList;
+    dmbList roundRobinList;
     dmbConnect *connects;
     dmbNetworkListener *listener;
 } dmbNetworkContext;
@@ -116,6 +121,12 @@ dmbCode dmbNetworkCloseConnect(dmbNetworkContext *pCtx, dmbConnect *pConn);
 #define dmbNetworkCanRead(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLIN)
 
 #define dmbNetworkCanWrite(EVENT_PTR) (((EVENT_PTR)->events) & EPOLLOUT)
+
+#define dmbConnectCanRead(CONN_PTR) ((CONN_PTR)->canRead)
+
+#define dmbConnectCanWrite(CONN_PTR) ((CONN_PTR)->canWrite)
+
+#define dmbConnectIsBlocked(CONN_PTR) ((CONN_PTR)->isblocked)
 
 #define dmbNetworkEventForeach(CTX, EVENT_PTR, INDEX, NUM) \
     for (INDEX=0, EVENT_PTR=&CTX->netData->events[INDEX]; \

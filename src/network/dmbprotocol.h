@@ -54,6 +54,6 @@ enum {
 
 #define DMB_INVALID_CMD 0xFFFF
 
-dmbCode dmbProcessEvent(dmbNetworkContext *pCtx, dmbNetworkEvent *pEvent, dmbConnect *pConn);
+void dmbProcessEvent(dmbNetworkContext *pCtx, dmbConnect *pConn);
 
 #endif // DMBPROTOCOL_H

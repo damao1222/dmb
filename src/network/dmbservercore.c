@@ -293,7 +293,13 @@ void * workThreadImpl (dmbThreadData data)
                 continue;
             }
 
-            dmbProcessEvent(pCtx, pEvent, pConn);
+            if (dmbNetworkCanRead(pEvent))
+                pConn->canRead = TRUE;
+
+            if (dmbNetworkCanWrite(pEvent))
+                pConn->canWrite = TRUE;
+
+            dmbProcessEvent(pCtx, pConn);
         }
 
         dmbNetworkCloseTimeoutConnect(pCtx);

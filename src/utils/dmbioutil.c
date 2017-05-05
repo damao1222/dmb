@@ -89,6 +89,10 @@ inline ssize_t dmbReadAvailable(int fd, dmbBYTE *pBuf, ssize_t count)
             else
                 return DMB_IO_ERROR;
         }
+        else if (ret == 0)
+        {
+            return DMB_IO_END;
+        }
 
         cur += ret;
     }
