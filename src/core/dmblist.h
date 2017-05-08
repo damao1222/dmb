@@ -29,6 +29,7 @@ typedef struct dmbListIter
 {
     dmbBOOL reverse;
     dmbNode *pNode;
+    dmbNode iterNode;
     dmbList *pList;
 } dmbListIter;
 
@@ -169,14 +170,18 @@ dmbBOOL dmbListNext(dmbListIter *pIter);
  */
 dmbNode* dmbListGet(dmbListIter *pIter);
 
+void dmbNodeInit(dmbNode *pNode);
+
+dmbBOOL dmbNodeIsUsed(dmbNode *pNode);
+
 /**
  * @brief 根据节点获得实际数据结构指针
  * @param ptr 当前节点指针
  * @param type 实际数据结构类型
  * @param member 节点在实际数据结构中的名称
  */
-#define dmbListEntry(ptr, type, member) \
-        DMB_CONTAINER_OF(ptr, type, member)
+#define dmbListEntry(pos, type, member) \
+        DMB_CONTAINER_OF(pos, type, member)
 
 /**
  * @brief 从头到尾遍历一次链表

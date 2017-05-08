@@ -31,7 +31,7 @@ static inline void insert(dmbNode * pNew, dmbNode *pPrev, dmbNode *pNext)
  * @param pHead 双向链表的头指针
  * @return 成功返回链表指针，失败返回NULL
  */
-void dmbListInit(dmbList *pHead)
+inline void dmbListInit(dmbList *pHead)
 {
     pHead->pNext = pHead->pPrev = pHead;
 }
@@ -42,7 +42,7 @@ void dmbListInit(dmbList *pHead)
  * @param pHead 双向链表的头指针
  * @return 为空返回TRUE，否则返回FALSE
  */
-dmbBOOL dmbListIsEmpty(dmbList *pHead)
+inline dmbBOOL dmbListIsEmpty(dmbList *pHead)
 {
     return pHead->pNext == pHead;
 }
@@ -53,7 +53,7 @@ dmbBOOL dmbListIsEmpty(dmbList *pHead)
  * @param pHead 双向链表的指针
  * @param pNode 插入的数据
  */
-void dmbListAppend(dmbList *pHead, dmbNode *pNode)
+inline void dmbListAppend(dmbList *pHead, dmbNode *pNode)
 {
     insert(pNode, pHead->pPrev, pHead);
 }
@@ -64,7 +64,7 @@ void dmbListAppend(dmbList *pHead, dmbNode *pNode)
  * @param pHead 双向链表的头指针
  * @param pNode 插入的数据
  */
-void dmbListPrepend(dmbList *pHead, dmbNode *pNode)
+inline void dmbListPrepend(dmbList *pHead, dmbNode *pNode)
 {
     insert(pNode, pHead, pHead->pNext);
 }
@@ -75,7 +75,7 @@ void dmbListPrepend(dmbList *pHead, dmbNode *pNode)
  * @param pHead 双向链表的头指针
  * @param pNode 插入的数据
  */
-void dmbListPushFront(dmbList *pHead, dmbNode *pNode)
+inline void dmbListPushFront(dmbList *pHead, dmbNode *pNode)
 {
     insert(pNode, pHead, pHead->pNext);
 }
@@ -87,7 +87,7 @@ void dmbListPushFront(dmbList *pHead, dmbNode *pNode)
  * @param pNode 插入的数据
  * @return 成功返回TRUE，否则返回FALSE
  */
-void dmbListPushBack(dmbList *pHead, dmbNode *pNode)
+inline void dmbListPushBack(dmbList *pHead, dmbNode *pNode)
 {
     insert(pNode, pHead->pPrev, pHead);
 }
@@ -98,7 +98,7 @@ void dmbListPushBack(dmbList *pHead, dmbNode *pNode)
  * @param pHead 双向链表的头指针
  * @return dmbNode * 成功返回首个节点，失败返回NULL
  */
-dmbNode* dmbListPopFront(dmbList *pHead)
+inline dmbNode* dmbListPopFront(dmbList *pHead)
 {
     if (!dmbListIsEmpty(pHead))
 	{
@@ -115,7 +115,7 @@ dmbNode* dmbListPopFront(dmbList *pHead)
  * @param pHead 双向链表的头指针
  * @return dmbNode * 成功返回最后一个节点，失败返回NULL
  */
-dmbNode* dmbListPopBack(dmbList *pHead)
+inline dmbNode* dmbListPopBack(dmbList *pHead)
 {
     if (!dmbListIsEmpty(pHead))
 	{
@@ -208,12 +208,10 @@ dmbINT dmbListRemoveRange(dmbList *pHead, dmbINT iStart, dmbINT iEnd)
  * 时间复杂度：O(1)
  * @param pNode 需要从链表中移除的节点指针
  */
-void dmbListRemove(dmbNode *pNode)
+inline void dmbListRemove(dmbNode *pNode)
 {
     pNode->pNext->pPrev = pNode->pPrev;
     pNode->pPrev->pNext = pNode->pNext;
-//    pNode->pNext = NULL;
-//    pNode->pPrev = NULL;
 }
 
 /**dmbListRemoveRange
@@ -223,7 +221,7 @@ void dmbListRemove(dmbNode *pNode)
  * @param iIndex 索引位置，负值表示从末尾开始计算的索引
  * @return 成功返回TRUE，否则返回FALSE
  */
-dmbBOOL dmbListRemoveAt(dmbList *pHead, dmbINT iIndex)
+inline dmbBOOL dmbListRemoveAt(dmbList *pHead, dmbINT iIndex)
 {
     return dmbListRemoveRange(pHead, iIndex, iIndex) > 0;
 }
@@ -233,7 +231,7 @@ dmbBOOL dmbListRemoveAt(dmbList *pHead, dmbINT iIndex)
  * 时间复杂度：O(n)
  * @param pHead 双向链表的头指针
  */
-void dmbListRemoveAll(dmbList *pHead)
+inline void dmbListRemoveAll(dmbList *pHead)
 {
     pHead->pNext = pHead->pPrev = pHead;
 }
@@ -244,7 +242,7 @@ void dmbListRemoveAll(dmbList *pHead)
  * @param pDest 目标链表
  * @param pSrc 被合并的源链表
  */
-void dmbListMerge(dmbList *pDest, dmbList *pSrc)
+inline void dmbListMerge(dmbList *pDest, dmbList *pSrc)
 {
     if (!dmbListIsEmpty(pSrc))
 	{
@@ -264,9 +262,11 @@ void dmbListMerge(dmbList *pDest, dmbList *pSrc)
  * @param pIter 迭代器
  * @param reverse 是否反向迭代
  */
-void dmbListInitIter(dmbList *pList, dmbListIter *pIter, dmbBOOL reverse)
+inline void dmbListInitIter(dmbList *pList, dmbListIter *pIter, dmbBOOL reverse)
 {
     pIter->pList = pIter->pNode = pList;
+    pIter->iterNode.pNext = pList->pNext;
+    pIter->iterNode.pPrev = pList->pPrev;
     pIter->reverse = reverse;
 }
 
@@ -275,15 +275,19 @@ void dmbListInitIter(dmbList *pList, dmbListIter *pIter, dmbBOOL reverse)
  * @param pIter 迭代器
  * @return 成功返回TRUE，遍历完毕返回FALSE
  */
-dmbBOOL dmbListNext(dmbListIter *pIter)
+inline dmbBOOL dmbListNext(dmbListIter *pIter)
 {
     if (pIter->reverse)
     {
-        pIter->pNode = pIter->pNode->pPrev;
+        pIter->pNode = pIter->iterNode.pPrev;
+        pIter->iterNode.pNext = pIter->pNode->pNext;
+        pIter->iterNode.pPrev = pIter->pNode->pPrev;
     }
     else
     {
-        pIter->pNode = pIter->pNode->pNext;
+        pIter->pNode = pIter->iterNode.pNext;
+        pIter->iterNode.pNext = pIter->pNode->pNext;
+        pIter->iterNode.pPrev = pIter->pNode->pPrev;
     }
 
     if (pIter->pNode == pIter->pList)
@@ -302,6 +306,16 @@ dmbBOOL dmbListNext(dmbListIter *pIter)
 inline dmbNode* dmbListGet(dmbListIter *pIter)
 {
     return pIter->pNode;
+}
+
+inline void dmbNodeInit(dmbNode *pNode)
+{
+    pNode->pNext = pNode->pPrev = NULL;
+}
+
+inline dmbBOOL dmbNodeIsUsed(dmbNode *pNode)
+{
+    return pNode->pNext != NULL;
 }
 
 /**

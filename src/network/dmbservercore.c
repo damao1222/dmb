@@ -262,6 +262,16 @@ static dmbCode processNewConnect(dmbWorkThreadData *pData)
     return DMB_ERRCODE_OK;
 }
 
+static void processRoundRobin(dmbNetworkContext *pCtx)
+{
+    dmbNode *pNode;
+    while (dmbListIsEmpty(&pCtx->roundRobinList))
+    {
+        pNode = dmbListPopFront(&pCtx->roundRobinList);
+        dmbProcessEvent(pCtx, dmbListEntry(pNode, dmbConnect, roundNode));
+    }
+}
+
 void * workThreadImpl (dmbThreadData data)
 {
     dmbCode code = DMB_ERRCODE_OK;
@@ -301,6 +311,8 @@ void * workThreadImpl (dmbThreadData data)
 
             dmbProcessEvent(pCtx, pConn);
         }
+
+        processRoundRobin(pCtx);
 
         dmbNetworkCloseTimeoutConnect(pCtx);
     }

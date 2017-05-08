@@ -104,7 +104,7 @@ void dmbProcessEvent(dmbNetworkContext *pCtx, dmbConnect *pConn)
     }
     else
     {
-        //add to round robin list
+        dmbListPushBack(&pCtx->roundRobinList, &pConn->roundNode);
     }
 }
 

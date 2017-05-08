@@ -244,26 +244,18 @@ dmbCode dmbNetworkOnLoop(dmbNetworkContext *pCtx, dmbSOCKET listener)
     return code;
 }
 
-static inline void cleanNode(dmbNode *pNode)
-{
-    pNode->pNext = pNode->pPrev = NULL;
-}
-
-static inline dmbBOOL isInList(dmbNode *pNode)
-{
-    return pNode->pNext != NULL;
-}
-
 dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx)
 {
     dmbINT iCount = 0;
     dmbConnect *pConn;
-    dmbListForeachEntry(pConn, &pCtx->timeoutConnList, timeoutNode)
+    dmbListIter iter;
+    dmbListInitIter(&pCtx->timeoutConnList, &iter, FALSE);
+    while (dmbListNext(&iter))
     {
+        pConn = dmbListEntry(dmbListGet(&iter), dmbConnect, timeoutNode);
         if (pConn->timeout == 0)
         {
             dmbListRemove(&pConn->timeoutNode);
-            cleanNode(&pConn->timeoutNode);
         }
         else if (pConn->timeout > 0 && dmbLocalCurrentSec() > pConn->timeout)
         {
@@ -271,6 +263,8 @@ dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx)
             dmbListRemove(&pConn->timeoutNode);
             dmbNetworkCloseConnect(pCtx, pConn);
         }
+
+        dmbNodeInit(&pConn->timeoutNode);
     }
     return iCount;
 }
@@ -569,7 +563,7 @@ void dmbNetworkWatchTimeout(dmbNetworkContext *pCtx, dmbConnect *pConn, dmbLONG 
     if (timeout > 0)
     {
         pConn->timeout = dmbLocalCurrentSec() + timeout;
-        if (!isInList(&pConn->timeoutNode))
+        if (!dmbNodeIsUsed(&pConn->timeoutNode))
             dmbListPushBack(&pCtx->timeoutConnList, &pConn->timeoutNode);
     }
 }

@@ -50,6 +50,24 @@ void dmbdllist_test()
         DMB_LOGD("----------scan index %d-----------\n", uIndex);
     } while (uIndex != 0);
 
+#if 0
+    dmbINT i = 0;
+    dmbListIter iter;
+    dmbListInitIter(&pList->head, &iter, FALSE);
+    while (dmbListNext(&iter))
+    {
+        dmbNode *node = dmbListGet(&iter);
+        if (i++ == 2)
+        {
+            dmbListRemove(node);
+            dmbNodeInit(node);
+        }
+        DMB_LOGD("list iter test: %d\n", dmbListEntry(node, dmbDLEntry, iter)->obj->num);
+    }
+
+    print("remove on iter", pList);
+#endif
+
     dmbDLListClear(pTmpList);
 
     dmbDLListGetRange(pList, 1, 5, pTmpList);

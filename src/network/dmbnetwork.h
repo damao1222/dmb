@@ -63,6 +63,7 @@ typedef struct dmbConnect {
     dmbUINT timeout;
     dmbNode idleNode;
     dmbNode timeoutNode;
+    dmbNode roundNode;
 } dmbConnect;
 
 typedef struct dmbNetworkListener{
