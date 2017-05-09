@@ -48,38 +48,41 @@ static dmbCode parsePkgHeader(dmbBYTE *pBuf, dmbRequest **pDestRequest)
     return DMB_ERRCODE_OK;
 }
 
+static inline void setResponse(dmbResponse *pResp, dmbCode code, dmbUINT length)
+{
+    pResp->magicNum = htons(DMB_MAGIC_NUMBER);
+    pResp->version = htons(DMB_VERSION);
+    pResp->status = htons(code);
+    pResp->length = htonl(length);
+}
+
 void dmbMakeErrorResponse(dmbConnect *pConn, dmbCode code)
 {
     dmbResponse *pResp = (dmbResponse*) pConn->writeBuf;
-    pResp->magicNum = DMB_MAGIC_NUMBER;
-    pResp->version = DMB_VERSION;
-    pResp->status = code;
+    setResponse(pResp, code, 0);
     pConn->needClose = needDisconnect(code);
-
-    pResp->length = 0;
     pConn->writeIndex = 0;
     pConn->writeLength += dmbResponseHeaderSize;
 }
 
-void dmbMakeErrorResponseWithData(dmbConnect *pConn, dmbCode code, dmbBYTE *pData, dmbUINT uSize)
+void dmbMakeResponseWithData(dmbConnect *pConn, dmbCode code, dmbBYTE *pData, dmbUINT uSize)
 {
-    dmbResponse *pResp = (dmbResponse*) pConn->writeBuf;
-    pResp->magicNum = DMB_MAGIC_NUMBER;
-    pResp->version = DMB_VERSION;
-    pResp->status = code;
-
-    pConn->writeIndex = 0;
+    dmbResponse *pResp;
     if (dmbResponseHeaderSize + uSize > g_settings.net_write_bufsize)
     {
-        pResp->status = DMB_ERRCODE_OUT_OF_WRITEBUF;
-        pResp->length = 0;
+        pConn->writeIndex = 0;
+        pResp = (dmbResponse*) pConn->writeBuf;
+        setResponse(pResp, DMB_ERRCODE_OUT_OF_WRITEBUF, 0);
         pConn->writeLength += dmbResponseHeaderSize;
         pConn->needClose = TRUE;
         return ;
     }
-    pResp->length = uSize;
+
+    pResp = (dmbResponse*) pConn->writeBuf + pConn->writeIndex;
+    setResponse(pResp, code, uSize);
+    pConn->needClose = needDisconnect(code);
     pConn->writeLength += dmbResponseHeaderSize + uSize;
-    dmbMemCopy(pConn->writeBuf+pConn->writeIndex, pData, uSize);
+    dmbMemCopy(pConn->writeBuf+pConn->writeIndex+dmbResponseHeaderSize, pData, uSize);
 }
 
 void dmbProcessEvent(dmbNetworkContext *pCtx, dmbConnect *pConn)
@@ -120,6 +123,8 @@ dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbU
 
     pData[uSize-1] = 0;
     DMB_LOGD("data is %s\n", pData);
+
+    dmbMakeResponseWithData(pConn, DMB_ERRCODE_OK, pData, uSize);
 
     return DMB_ERRCODE_OK;
 }
@@ -197,7 +202,7 @@ static dmbCode processData(dmbConnect *pConn)
         if (pRequest->length + dmbResponseHeaderSize > g_settings.net_read_bufsize)
         {
             code = DMB_ERRCODE_OUT_OF_READBUF;
-            dmbMakeErrorResponseWithData(pConn, code, (dmbBYTE*)&g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
+            dmbMakeResponseWithData(pConn, code, (dmbBYTE*)&g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
         }
         else
         {
