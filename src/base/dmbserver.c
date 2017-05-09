@@ -22,7 +22,7 @@
 
 
 
-dmbCode dmbSetrLimit(rlim_t nofile)
+dmbCode dmbSetrLimit(dmbUINT nofile)
 {
     dmbCode code = DMB_ERRCODE_OK;
     struct rlimit rl;

@@ -21,4 +21,6 @@
 
 #include "dmbdefines.h"
 
+dmbCode dmbSetrLimit(dmbUINT nofile);
+
 #endif // DMBSERVER_H

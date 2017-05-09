@@ -92,10 +92,10 @@ typedef dmbINT16 dmbCode;
 //########11-100网络及协议错误码#######
 //非阻塞模式，accept没有收到连接请求，需要重试
 #define DMB_ERRCODE_NETWORK_AGAIN 11
-//连接关闭时错误
-#define DMB_ERRCODE_NERWORK_CLOSE_FAILED 12
 //连接已正常关闭
-#define DMB_ERRCODE_NERWORK_CLOSED 13
+#define DMB_ERRCODE_NERWORK_CLOSED 12
+//连接关闭时错误
+#define DMB_ERRCODE_NERWORK_CLOSE_FAILED 13
 //需要关闭的网络错误码起始
 #define DMB_ERRCODE_NETWORK_ERRBEGIN 20
 //网络异常

@@ -28,6 +28,7 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn);
 dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbUINT uSize);
 static inline dmbBOOL needDisconnect(dmbCode code)
 {
+    DMB_LOGD("code is %d\n", code);
     return code > DMB_ERRCODE_NETWORK_ERRBEGIN && code < DMB_ERRCODE_NETWORK_ERREND;
 }
 
@@ -99,8 +100,13 @@ void dmbProcessEvent(dmbNetworkContext *pCtx, dmbConnect *pConn)
 
     writeCode = writeData(pCtx, pConn);
 
-    if (pConn->needClose)
-        dmbNetworkCloseConnect(pCtx, pConn);
+
+    if (pConn->needClose && pConn->writeLength == 0)
+    {
+//        dmbNetworkWatchTimeout(pCtx, pConn, g_settings.net_rw_timeout);
+        dmbNetworkDelEvent(pCtx, pConn->cliFd, 0);
+        return ;
+    }
 
     if (readCode == DMB_ERRCODE_NETWORK_AGAIN &&
         (writeCode == DMB_ERRCODE_NETWORK_AGAIN ||
@@ -168,6 +174,7 @@ static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn)
             }
             else
             {
+                DMB_LOGD("Read %d\n", ret);
                 pConn->readIndex += ret;
                 pConn->readLength += ret;
 
@@ -199,15 +206,14 @@ static dmbCode processData(dmbConnect *pConn)
     code = parsePkgHeader(pConn->readBuf + pConn->requestIndex, &pRequest);
     if (code != DMB_ERRCODE_OK)
     {
-        if (pRequest->length + dmbResponseHeaderSize > g_settings.net_read_bufsize)
-        {
-            code = DMB_ERRCODE_OUT_OF_READBUF;
-            dmbMakeResponseWithData(pConn, code, (dmbBYTE*)&g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
-        }
-        else
-        {
-            dmbMakeErrorResponse(pConn, code);
-        }
+        dmbMakeErrorResponse(pConn, code);
+        return code;
+    }
+
+    if (pRequest->length + dmbResponseHeaderSize > g_settings.net_read_bufsize)
+    {
+        code = DMB_ERRCODE_OUT_OF_READBUF;
+        dmbMakeResponseWithData(pConn, code, (dmbBYTE*)&g_settings.net_read_bufsize, sizeof(g_settings.net_read_bufsize));
         return code;
     }
 

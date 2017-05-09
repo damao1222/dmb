@@ -25,7 +25,7 @@ typedef struct dmbSettings{
     dmbCHAR host[16];
     dmbINT port;
     dmbINT listen_backlog;
-    dmbINT open_files;
+    dmbUINT open_files;
     dmbINT thread_size;
     dmbUINT connect_size_per_thread;
     dmbUINT net_rw_timeout;

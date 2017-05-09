@@ -18,6 +18,7 @@
 #include "dmbdefines.h"
 #include "utils/dmbsysutil.h"
 #include "base/dmbsettings.h"
+#include "base/dmbserver.h"
 #include <unistd.h>
 #include "utils/dmblog.h"
 
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
     dmbSystemInit();
 
     dmbLoadSettings(NULL);
-
+    dmbSetrLimit(g_settings.open_files);
 //    dmbbinlist_test();
 //    dmbbinlist_merge_test();
 //    dmbstring_test();
