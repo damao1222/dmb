@@ -51,9 +51,9 @@ int main(int argc, char** argv)
 //    dmbbinlist_test();
 //    dmbbinlist_merge_test();
 //    dmbstring_test();
-    dmbdllist_test();
+//    dmbdllist_test();
 //    dmbutils_test();
-//    dmbnetwork_test();
+    dmbnetwork_test();
 
     sync();
 

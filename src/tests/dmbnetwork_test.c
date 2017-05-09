@@ -37,7 +37,7 @@ static void testServer()
     DMB_TEST_P1(code, dmbInitWorkThreads, &ctx);
     DMB_TEST_P1(code, dmbInitAcceptThread, &ctx);
 
-    dmbEndTimeInit(&time, 3600*1000);
+    dmbEndTimeInit(&time, 5*1000);
     while (!dmbEndTimeIsExpired(&time))
     {
         dmbSleep(100);

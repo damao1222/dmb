@@ -151,6 +151,8 @@ dmbCode dmbNetworkPoll(dmbNetworkContext *pCtx, dmbINT *iEventNum, dmbINT iTimeo
     dmbINT iNum = epoll_wait(pCtx->netData->epfd, pCtx->netData->events, pCtx->netData->eventSize, iTimeout);
     if (iNum == -1)
     {
+//        int error = errno;
+//        error = error;
         return DMB_ERRCODE_NETWORK_ERROR;
     }
 
@@ -256,15 +258,15 @@ dmbINT dmbNetworkCloseTimeoutConnect(dmbNetworkContext *pCtx)
         if (pConn->timeout == 0)
         {
             dmbListRemove(&pConn->timeoutNode);
+            dmbNodeInit(&pConn->timeoutNode);
         }
         else if (pConn->timeout > 0 && dmbLocalCurrentSec() > pConn->timeout)
         {
             ++iCount;
             dmbListRemove(&pConn->timeoutNode);
+            dmbNodeInit(&pConn->timeoutNode);
             dmbNetworkCloseConnect(pCtx, pConn);
         }
-
-        dmbNodeInit(&pConn->timeoutNode);
     }
     return iCount;
 }
@@ -323,10 +325,6 @@ dmbCode dmbNetworkPurgeConnectPool(dmbNetworkContext *pCtx)
         for (i=0; i<pCtx->connectSize; ++i)
         {
             dmbNetworkCloseConnect(pCtx, &pCtx->connects[i]);
-            pCtx->connects[i].readBuf = NULL;
-            pCtx->connects[i].readBufSize = 0;
-            pCtx->connects[i].writeBuf = NULL;
-            pCtx->connects[i].writeBufSize = 0;
         }
         DMB_SAFE_FREE(pCtx->connects[0].readBuf);
         DMB_SAFE_FREE(pCtx->connects);

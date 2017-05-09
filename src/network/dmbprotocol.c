@@ -20,6 +20,7 @@
 #include "base/dmbsettings.h"
 #include "utils/dmblog.h"
 #include "core/dmballoc.h"
+#include <arpa/inet.h>
 
 static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn);
 static dmbCode processData(dmbConnect *pConn);
@@ -33,13 +34,15 @@ static inline dmbBOOL needDisconnect(dmbCode code)
 static dmbCode parsePkgHeader(dmbBYTE *pBuf, dmbRequest **pDestRequest)
 {
     dmbRequest *pReq = (dmbRequest*)pBuf;
-
+    pReq->magicNum = ntohs(pReq->magicNum);
     if (pReq->magicNum != DMB_MAGIC_NUMBER)
         return DMB_ERRCODE_PROTOCOL_ERROR;
 
+    pReq->version = ntohs(pReq->version);
     if (pReq->version != DMB_VERSION)
         return DMB_ERRCODE_VERSION_ERROR;
 
+    pReq->length = ntohl(pReq->length);
     *pDestRequest = pReq;
 
     return DMB_ERRCODE_OK;
@@ -115,6 +118,9 @@ dmbCode dmbProcessPackage(dmbConnect *pConn, dmbINT16 iCmd, dmbBYTE *pData, dmbU
     DMB_UNUSED(pData);
     DMB_UNUSED(uSize);
 
+    pData[uSize-1] = 0;
+    DMB_LOGD("data is %s\n", pData);
+
     return DMB_ERRCODE_OK;
 }
 
@@ -178,7 +184,7 @@ static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn)
 static dmbCode processData(dmbConnect *pConn)
 {
     dmbCode code = DMB_ERRCODE_OK;
-    dmbRequest *pRequest;
+    dmbRequest *pRequest = NULL;
 
     if (pConn->readLength < dmbRequestHeaderSize)
     {
@@ -200,7 +206,7 @@ static dmbCode processData(dmbConnect *pConn)
         return code;
     }
 
-    if (pRequest->length < pConn->readLength - dmbResponseHeaderSize)
+    if (pRequest->length <= pConn->readLength - dmbResponseHeaderSize)
     {
         do {
             if (pRequest->multiPkg)
@@ -246,6 +252,9 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn)
 {
     dmbCode code = DMB_ERRCODE_OK;
     ssize_t ret = 0;
+    if (pConn->writeLength == 0)
+        return code;
+
     if (dmbConnectCanWrite(pConn))
     {
         do {

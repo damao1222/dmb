@@ -265,7 +265,7 @@ static dmbCode processNewConnect(dmbWorkThreadData *pData)
 static void processRoundRobin(dmbNetworkContext *pCtx)
 {
     dmbNode *pNode;
-    while (dmbListIsEmpty(&pCtx->roundRobinList))
+    while (!dmbListIsEmpty(&pCtx->roundRobinList))
     {
         pNode = dmbListPopFront(&pCtx->roundRobinList);
         dmbProcessEvent(pCtx, dmbListEntry(pNode, dmbConnect, roundNode));
