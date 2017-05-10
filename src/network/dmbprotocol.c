@@ -141,7 +141,7 @@ static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn)
     dmbCode code = DMB_ERRCODE_OK;
     if (dmbConnectCanRead(pConn))
     {
-        do {
+        while (TRUE) {
             //Need add to roundrobinlist and continue read.
             if (pConn->readBufSize <= pConn->readIndex)
             {
@@ -182,8 +182,10 @@ static dmbCode readData(dmbNetworkContext *pCtx, dmbConnect *pConn)
                 {
                     continue;
                 }
+
+                break;
             }
-        } while (0);
+        }
     }
     else
     {
@@ -243,7 +245,7 @@ static dmbCode processData(dmbConnect *pConn)
         } while (0);
 
         pConn->readLength -= (dmbResponseHeaderSize + pRequest->length);
-        pConn->readIndex -= pConn->readLength;
+        pConn->readIndex -= (dmbResponseHeaderSize + pRequest->length);
         if (pConn->readLength > 0)
         {
             dmbMemMove(pConn->readBuf + pConn->requestIndex,
@@ -268,7 +270,7 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn)
 
     if (dmbConnectCanWrite(pConn))
     {
-        do {
+        while (TRUE) {
             ret = dmbWriteAvailable(pConn->cliFd, pConn->writeBuf + pConn->writeIndex, pConn->writeLength);
             if (ret == DMB_IO_AGAIN)
             {
@@ -289,6 +291,7 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn)
             else if (ret == DMB_IO_END)
             {
                 DMB_LOGD("Write end\n");
+                break;
             }
             else
             {
@@ -306,7 +309,7 @@ static dmbCode writeData(dmbNetworkContext *pCtx, dmbConnect *pConn)
                     return DMB_ERRCODE_OK;
                 }
             }
-        } while (0);
+        }
     }
     else
     {
